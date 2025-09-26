@@ -70,14 +70,8 @@ def build_ui(page: ft.Page):
             except:
                 pass  # Ignore if not on page yet
     
-    # Resize handler to update navigation when window size changes
-    def on_window_resize(e):
-        # Update navigation container height
-        if nav_container_ref.current and page.window_height:
-            nav_container_ref.current.height = page.window_height - 100
-            nav_container_ref.current.update()
-    
-    page.on_resize = on_window_resize
+    # Remove dynamic resize handler to prevent navigation movement
+    # Navigation will now stay fixed in position regardless of content changes
     
     # Custom Pastel Purple Theme Colors
     PASTEL_PURPLE = "#B19CD9"      # Light pastel purple
@@ -164,15 +158,18 @@ def build_ui(page: ft.Page):
         title=ft.Text("📚 Add New Class"),
         content=ft.Container(
             ft.Column([
-                ft.Text("Enter the name of your new class:"),
+                ft.Text("Enter the name of your new class:", size=14),
                 ft.TextField(
                     ref=new_class_name_ref,
                     hint_text="e.g., Computer Science 101",
                     autofocus=True,
                     on_submit=add_new_class,
+                    width=280,
                 ),
-            ], spacing=10),
+            ], spacing=15, tight=True),
             width=300,
+            height=120,  # Fixed compact height
+            padding=ft.padding.all(10),
         ),
         actions=[
             ft.TextButton("Cancel", on_click=close_add_class_dialog),
@@ -383,7 +380,7 @@ def build_ui(page: ft.Page):
     notes_editor = ft.TextField(
         ref=notes_ref,
         multiline=True,
-        min_lines=28,  # Adjusted for toolbar space while maintaining large size
+        min_lines=28,  # Reduced size to fit screen properly
         max_lines=28,  # Fixed height - no expansion
         expand=True,
         hint_text="Type your lecture notes here...\n\nTips:\n• Use bullet points for key concepts\n• Organize thoughts clearly\n• The AI will analyze this content",
@@ -395,12 +392,9 @@ def build_ui(page: ft.Page):
 
     notes_view = ft.Container(
         ft.Column([
-            ft.Container(toolbar, padding=ft.padding.only(bottom=20)),  # Reduced spacing for better proportions
+            ft.Container(toolbar, padding=ft.padding.only(bottom=25)),  # Standardized spacing
             ft.Container(
-                ft.Column([
-                    document_status_ref.current,  # Document status display
-                    notes_editor, 
-                ], spacing=5),
+                notes_editor, 
                 expand=True,
                 border=ft.border.all(2, PASTEL_PURPLE),
                 border_radius=12,
@@ -977,19 +971,18 @@ def build_ui(page: ft.Page):
 
     main_content.content = ft.Container(notes_view, expand=True, padding=ft.padding.all(10))
 
-    # Create navigation container with reference for dynamic resizing
+    # Create navigation container with truly fixed center-left positioning
     nav_container = ft.Container(
         ref=nav_container_ref,
-        content=ft.Container(
-            nav,
-            height=300,  # Fixed height container for the nav buttons
-            alignment=ft.alignment.center,  # Center within this fixed height
-        ),
+        content=ft.Column([
+            ft.Container(expand=True),  # Top spacer - pushes nav to center
+            nav,  # Navigation buttons in the center
+            ft.Container(expand=True),  # Bottom spacer - keeps nav centered
+        ]),
         width=200,
-        height=page.window_height - 100 if page.window_height else 700,  # Fixed height
+        height=900,  # Fixed height that matches window height
         bgcolor=LIGHT_GRAY,
         padding=ft.padding.all(12),
-        alignment=ft.alignment.center,  # Center the inner container vertically
     )
 
     layout = ft.Row([
