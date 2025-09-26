@@ -1,0 +1,42 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+env/
+venv/
+*.env
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+
+# Jupyter / IPython
+.ipynb_checkpoints/
+
+# VS Code / IDE configs
+.vscode/
+.idea/
+
+# OS junk files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Audio/Transcription test data
+data/transcripts/samples/
+*.wav
+*.mp3
+
+# Whisper transcription outputs
+data/transcripts/outputs/
+
+# Local secrets
+.env.local
+.env.*.local
