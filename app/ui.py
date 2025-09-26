@@ -380,28 +380,50 @@ def build_ui(page: ft.Page):
     notes_editor = ft.TextField(
         ref=notes_ref,
         multiline=True,
-        min_lines=28,  # Reduced size to fit screen properly
-        max_lines=28,  # Fixed height - no expansion
+        min_lines=1,  # Allow natural expansion within fixed container
+        max_lines=None,  # No line limit - container height controls size
         expand=True,
         hint_text="Type your lecture notes here...\n\nTips:\n• Use bullet points for key concepts\n• Organize thoughts clearly\n• The AI will analyze this content",
         hint_style=ft.TextStyle(color=ft.colors.OUTLINE),
-        border=ft.InputBorder.OUTLINE,
-        content_padding=ft.padding.all(16),
+        border=ft.InputBorder.NONE,  # Remove border to prevent double borders
+        content_padding=ft.padding.all(8),  # Minimal padding to fit within container
         text_size=14,
+        bgcolor=ft.colors.TRANSPARENT,  # Make background transparent
+        width=None,  # Let container control width
+        height=None,  # Let container control height
     )
 
     notes_view = ft.Container(
         ft.Column([
-            ft.Container(toolbar, padding=ft.padding.only(bottom=25)),  # Standardized spacing
+            # Header section - standardized height to match other tabs
             ft.Container(
-                notes_editor, 
-                expand=True,
+                toolbar, 
+                padding=ft.padding.only(bottom=15),
+                height=60,  # Fixed header height matching other tabs
+            ),
+            # Main content area - fixed height for consistency
+            ft.Container(
+                notes_editor,
+                height=500,  # Fixed height to fit properly within border
+                padding=ft.padding.all(8),  # Internal padding between border and textbox
                 border=ft.border.all(2, PASTEL_PURPLE),
                 border_radius=12,
-                padding=ft.padding.all(8),
                 bgcolor=WHITE,
             ),
-        ], expand=True, spacing=0),
+            # Status area - consistent with other tabs
+            ft.Container(
+                ft.Row([
+                    ft.Icon(ft.icons.INFO_OUTLINE, size=16, color=PASTEL_PURPLE),
+                    ft.Text("💡 Tip: Use bullet points and clear headings for better AI analysis", 
+                           size=12, color=ft.colors.ON_SURFACE, italic=True),
+                ], spacing=8),
+                padding=ft.padding.all(10),
+                height=40,  # Fixed tip area height
+                border_radius=8,
+                bgcolor=ft.colors.SURFACE_VARIANT,
+                margin=ft.margin.only(top=15),
+            ),
+        ], spacing=0),
         expand=True,
         border=ft.border.all(2, PASTEL_PURPLE),
         border_radius=12,
@@ -562,7 +584,7 @@ def build_ui(page: ft.Page):
     model_size_ref = ft.Ref[ft.Dropdown]()
     model_size_dropdown = ft.Dropdown(
         ref=model_size_ref,
-        width=120,
+        width=140,
         value="base",
         options=[
             ft.dropdown.Option("tiny"),
@@ -572,6 +594,12 @@ def build_ui(page: ft.Page):
             ft.dropdown.Option("large"),
         ],
         label="Model Size",
+        bgcolor=WHITE,
+        color=ft.colors.BLACK,
+        border_color=PASTEL_PURPLE,
+        content_padding=ft.padding.all(10),
+        text_style=ft.TextStyle(size=14),
+        border_radius=8,
     )
     
     upload_status_ref = ft.Ref[ft.Text]()
@@ -622,32 +650,89 @@ def build_ui(page: ft.Page):
         padding=ft.padding.all(12),
     )
 
-    # Simple transcription view (back to original + upload controls at bottom)
+    # Uniform transcription view - standardized to match other tabs
     trans_view = ft.Container(
         ft.Column([
-            ft.Container(trans_header, padding=ft.padding.only(bottom=10)),
-            ft.Container(trans_controls, padding=ft.padding.only(bottom=15)),
+            # Header section - standardized height to match other tabs
             ft.Container(
-                trans_live, 
-                expand=True,
+                trans_header, 
+                padding=ft.padding.only(bottom=15),
+                height=60,  # Fixed header height matching other tabs
+            ),
+            # Main content area - fixed height for consistency
+            ft.Container(
+                ft.Column([
+                    # Live transcription section (top half)
+                    ft.Container(
+                        ft.Column([
+                            ft.Row([
+                                ft.Icon(ft.icons.MIC, color=PASTEL_PURPLE, size=16),
+                                ft.Text("Live Transcription", size=14, weight=ft.FontWeight.BOLD, color=PASTEL_PURPLE),
+                            ], spacing=8),
+                            ft.Container(height=8),
+                            ft.Container(trans_controls, height=50),  # Compact controls
+                            ft.Container(height=8),
+                            ft.Container(
+                                trans_live,
+                                expand=True,
+                                border=ft.border.all(1, PASTEL_PURPLE),
+                                border_radius=8,
+                                bgcolor=WHITE,
+                            ),
+                        ], spacing=0),
+                        height=245,  # Increased to split evenly (245 + 5 + 245 = 495, leaving 5px for container padding)
+                        padding=ft.padding.all(12),
+                        border=ft.border.all(2, PASTEL_PURPLE),
+                        border_radius=12,
+                        bgcolor=SOFT_PURPLE,
+                    ),
+                    
+                    ft.Container(height=5),  # Minimal spacing between sections
+                    
+                    # Audio upload section (bottom half)
+                    ft.Container(
+                        ft.Column([
+                            ft.Row([
+                                ft.Icon(ft.icons.UPLOAD_FILE, color=PASTEL_PURPLE, size=16),
+                                ft.Text("Audio File Upload", size=14, weight=ft.FontWeight.BOLD, color=PASTEL_PURPLE),
+                            ], spacing=8),
+                            ft.Container(height=8),
+                            ft.Container(upload_controls, height=80),  # Upload controls
+                            ft.Container(height=8),
+                            ft.Container(
+                                upload_results,
+                                expand=True,
+                                border=ft.border.all(1, PASTEL_PURPLE),
+                                border_radius=8,
+                                bgcolor=WHITE,
+                            ),
+                        ], spacing=0),
+                        height=245,  # Same height for perfect split
+                        padding=ft.padding.all(12),
+                        border=ft.border.all(2, PASTEL_PURPLE),
+                        border_radius=12,
+                        bgcolor=SOFT_PURPLE,
+                    ),
+                ], spacing=0),
+                height=500,  # Fixed height to match other tabs
                 border=ft.border.all(2, PASTEL_PURPLE),
                 border_radius=12,
                 bgcolor=WHITE,
             ),
-            ft.Divider(height=20, color=PASTEL_PURPLE),
+            # Status area - consistent with other tabs
             ft.Container(
-                ft.Text("📁 Audio File Upload", size=16, weight=ft.FontWeight.BOLD, color=PASTEL_PURPLE),
-                padding=ft.padding.only(bottom=10)
+                ft.Row([
+                    ft.Icon(ft.icons.INFO_OUTLINE, size=16, color=PASTEL_PURPLE),
+                    ft.Text("💡 Tip: Use live recording or upload audio files for transcription", 
+                           size=12, color=ft.colors.ON_SURFACE, italic=True),
+                ], spacing=8),
+                padding=ft.padding.all(10),
+                height=40,  # Fixed tip area height
+                border_radius=8,
+                bgcolor=ft.colors.SURFACE_VARIANT,
+                margin=ft.margin.only(top=15),
             ),
-            ft.Container(upload_controls, padding=ft.padding.only(bottom=10)),
-            ft.Container(
-                upload_results,
-                height=150,  # Fixed height for upload results
-                border=ft.border.all(2, PASTEL_PURPLE),
-                border_radius=12,
-                bgcolor=WHITE,
-            ),
-        ], expand=True, spacing=0),
+        ], spacing=0),
         expand=True,
         border=ft.border.all(2, PASTEL_PURPLE),
         border_radius=12,
@@ -657,7 +742,7 @@ def build_ui(page: ft.Page):
 
     sum_mode = ft.Dropdown(
         ref=sum_mode_ref,
-        width=200,
+        width=220,
         value="Topics",
         options=[
             ft.dropdown.Option("Topics", "📝 Key Topics"),
@@ -665,16 +750,29 @@ def build_ui(page: ft.Page):
             ft.dropdown.Option("Detailed", "📋 Detailed Summary")
         ],
         border_radius=8,
+        bgcolor=WHITE,
+        color=ft.colors.BLACK,
+        border_color=PASTEL_PURPLE,
+        content_padding=ft.padding.all(12),
+        text_style=ft.TextStyle(size=14),
     )
     sum_btn = ft.ElevatedButton(
         "Generate Summary", 
         icon=ft.icons.SUMMARIZE,
         style=ft.ButtonStyle(bgcolor=PASTEL_PURPLE, color=ft.colors.ON_PRIMARY)
     )
-    sum_out = ft.Text(
+    sum_out = ft.TextField(
         ref=sum_output_ref, 
-        selectable=True,
-        size=14,
+        multiline=True,
+        read_only=True,
+        expand=True,
+        text_size=14,
+        border=ft.InputBorder.OUTLINE,
+        border_radius=8,
+        content_padding=ft.padding.all(12),
+        bgcolor=WHITE,
+        hint_text="Summary will appear here...",
+        hint_style=ft.TextStyle(color=ft.colors.OUTLINE, italic=True),
     )
 
     async def do_summarize(_):
@@ -717,9 +815,13 @@ def build_ui(page: ft.Page):
     sum_btn.on_click = do_summarize
 
     summarizer_tab = ft.Column([
+        # Controls section  
         ft.Container(
             ft.Column([
-                ft.Text("📝 AI Summarizer", size=16, weight=ft.FontWeight.BOLD),
+                ft.Row([
+                    ft.Icon(ft.icons.SUMMARIZE, color=PASTEL_PURPLE, size=20),
+                    ft.Text("AI Summarizer", size=16, weight=ft.FontWeight.BOLD),
+                ], spacing=8),
                 ft.Text("Transform your notes into structured summaries", size=12, color=ft.colors.OUTLINE),
                 ft.Container(height=10),
                 ft.Row([
@@ -730,24 +832,26 @@ def build_ui(page: ft.Page):
                 ], alignment=ft.MainAxisAlignment.START, spacing=15),
             ]),
             padding=ft.padding.all(16),
-            border=ft.border.all(1, ft.colors.OUTLINE),
-            border_radius=8,
-            bgcolor=ft.colors.SURFACE,
+            height=130,
         ),
         ft.Container(height=15),
+        # Output section
         ft.Container(
             ft.Column([
-                ft.Text("Summary Output:", weight=ft.FontWeight.W_500),
-                ft.Container(height=5),
-                sum_out,
+                ft.Row([
+                    ft.Icon(ft.icons.ARTICLE, color=PASTEL_PURPLE, size=16),
+                    ft.Text("Summary Output:", weight=ft.FontWeight.W_500),
+                ], spacing=8),
+                ft.Container(height=8),
+                ft.Container(
+                    sum_out,
+                    expand=True,
+                ),
             ]),
-            padding=ft.padding.all(16),
+            padding=ft.padding.all(12),
             expand=True,
-            border=ft.border.all(1, ft.colors.OUTLINE),
-            border_radius=8,
-            bgcolor=ft.colors.SURFACE_VARIANT,
         ),
-    ], expand=True, spacing=0)
+    ], spacing=0)
 
     # Study Buddy tab
     ask_in = ft.TextField(
@@ -763,10 +867,18 @@ def build_ui(page: ft.Page):
         icon=ft.icons.QUESTION_ANSWER,
         style=ft.ButtonStyle(bgcolor=DARK_PURPLE, color=ft.colors.ON_PRIMARY)
     )
-    ask_out = ft.Text(
+    ask_out = ft.TextField(
         ref=ask_output_ref, 
-        selectable=True,
-        size=14,
+        multiline=True,
+        read_only=True,
+        expand=True,
+        text_size=14,
+        border=ft.InputBorder.OUTLINE,
+        border_radius=8,
+        content_padding=ft.padding.all(12),
+        bgcolor=WHITE,
+        hint_text="AI response will appear here...",
+        hint_style=ft.TextStyle(color=ft.colors.OUTLINE, italic=True),
     )
 
     async def do_ask(_):
@@ -811,41 +923,52 @@ def build_ui(page: ft.Page):
     ask_btn.on_click = do_ask
 
     study_tab = ft.Column([
+        # Question section
         ft.Container(
             ft.Column([
-                ft.Text("🤖 Study Buddy", size=16, weight=ft.FontWeight.BOLD),
+                ft.Row([
+                    ft.Icon(ft.icons.PSYCHOLOGY, color=PASTEL_PURPLE, size=20),
+                    ft.Text("Study Buddy", size=16, weight=ft.FontWeight.BOLD),
+                ], spacing=8),
                 ft.Text("Ask questions about your notes and get AI-powered answers", size=12, color=ft.colors.OUTLINE),
                 ft.Container(height=10),
                 ft.Row([ask_in, ask_btn], spacing=10),
             ]),
             padding=ft.padding.all(16),
-            border=ft.border.all(1, ft.colors.OUTLINE),
-            border_radius=8,
-            bgcolor=ft.colors.SURFACE,
+            height=130,
         ),
         ft.Container(height=15),
+        # Response section
         ft.Container(
             ft.Column([
-                ft.Text("AI Response:", weight=ft.FontWeight.W_500),
-                ft.Container(height=5),
-                ask_out,
+                ft.Row([
+                    ft.Icon(ft.icons.CHAT_BUBBLE_OUTLINE, color=PASTEL_PURPLE, size=16),
+                    ft.Text("AI Response:", weight=ft.FontWeight.W_500),
+                ], spacing=8),
+                ft.Container(height=8),
+                ft.Container(
+                    ask_out,
+                    expand=True,
+                ),
             ]),
-            padding=ft.padding.all(16),
+            padding=ft.padding.all(12),
             expand=True,
-            border=ft.border.all(1, ft.colors.OUTLINE),
-            border_radius=8,
-            bgcolor=ft.colors.SURFACE_VARIANT,
         ),
-    ], expand=True, spacing=0)
+    ], spacing=0)
 
     # Quiz Master tab
     quiz_n = ft.TextField(
         ref=quiz_n_ref, 
-        width=120, 
+        width=140, 
         value="5", 
         label="Questions",
         border_radius=8,
         text_align=ft.TextAlign.CENTER,
+        bgcolor=WHITE,
+        color=ft.colors.BLACK,
+        border_color=PASTEL_PURPLE,
+        content_padding=ft.padding.all(12),
+        text_style=ft.TextStyle(size=14, weight=ft.FontWeight.W_500),
     )
     quiz_btn = ft.ElevatedButton(
         "Generate Quiz", 
@@ -855,8 +978,9 @@ def build_ui(page: ft.Page):
     quiz_list = ft.ListView(
         ref=quiz_list_ref, 
         expand=True, 
-        spacing=12, 
-        padding=ft.padding.all(12)
+        spacing=15, 
+        padding=ft.padding.all(16),
+        auto_scroll=True,
     )
 
     async def do_quiz(_):
@@ -892,22 +1016,31 @@ def build_ui(page: ft.Page):
             quiz_list_ref.current.controls.append(
                 ft.Container(
                     ft.Column([
-                        ft.Text(
-                            f"Question {i}", 
-                            size=12, 
-                            weight=ft.FontWeight.BOLD, 
-                            color=ft.colors.PRIMARY
+                        ft.Container(
+                            ft.Text(
+                                f"Question {i}", 
+                                size=14, 
+                                weight=ft.FontWeight.BOLD, 
+                                color=WHITE
+                            ),
+                            padding=ft.padding.all(8),
+                            bgcolor=PASTEL_PURPLE,
+                            border_radius=6,
+                            margin=ft.margin.only(bottom=10),
                         ),
-                        ft.Container(height=5),
-                        ft.Text(q, size=14, weight=ft.FontWeight.W_500),
-                        ft.Container(height=8),
-                        ft.Text("Answer:", size=12, color=ft.colors.OUTLINE),
-                        ft.Text(a, size=13),
+                        ft.Text(q, size=14, weight=ft.FontWeight.W_500, color=ft.colors.BLACK),
+                        ft.Container(height=12),
+                        ft.Container(
+                            ft.Text("Answer:", size=12, weight=ft.FontWeight.BOLD, color=DARK_PURPLE),
+                            padding=ft.padding.only(bottom=5),
+                        ),
+                        ft.Text(a, size=13, color=ft.colors.ON_SURFACE),
                     ], spacing=0),
-                    padding=ft.padding.all(16),
-                    border=ft.border.all(1, ft.colors.OUTLINE),
-                    border_radius=8,
-                    bgcolor=ft.colors.SURFACE,
+                    padding=ft.padding.all(18),
+                    border=ft.border.all(2, PASTEL_PURPLE),
+                    border_radius=12,
+                    bgcolor=WHITE,
+                    margin=ft.margin.only(bottom=8),
                 )
             )
         quiz_btn.disabled = False
@@ -917,9 +1050,13 @@ def build_ui(page: ft.Page):
     quiz_btn.on_click = do_quiz
 
     quiz_tab = ft.Column([
+        # Controls section
         ft.Container(
             ft.Column([
-                ft.Text("🎯 Quiz Master", size=16, weight=ft.FontWeight.BOLD),
+                ft.Row([
+                    ft.Icon(ft.icons.QUIZ, color=PASTEL_PURPLE, size=20),
+                    ft.Text("Quiz Master", size=16, weight=ft.FontWeight.BOLD),
+                ], spacing=8),
                 ft.Text("Generate practice questions from your notes", size=12, color=ft.colors.OUTLINE),
                 ft.Container(height=10),
                 ft.Row([
@@ -930,19 +1067,29 @@ def build_ui(page: ft.Page):
                 ], alignment=ft.MainAxisAlignment.START, spacing=15),
             ]),
             padding=ft.padding.all(16),
-            border=ft.border.all(1, ft.colors.OUTLINE),
-            border_radius=8,
-            bgcolor=ft.colors.SURFACE,
+            height=130,
         ),
         ft.Container(height=15),
+        # Quiz questions section
         ft.Container(
-            quiz_list,
+            ft.Column([
+                ft.Row([
+                    ft.Icon(ft.icons.LIST_ALT, color=PASTEL_PURPLE, size=16),
+                    ft.Text("Generated Quiz Questions:", weight=ft.FontWeight.W_500),
+                ], spacing=8),
+                ft.Container(height=8),
+                ft.Container(
+                    quiz_list,
+                    expand=True,
+                    border=ft.border.all(2, PASTEL_PURPLE),
+                    border_radius=8,
+                    bgcolor=WHITE,
+                ),
+            ]),
+            padding=ft.padding.all(12),
             expand=True,
-            border=ft.border.all(1, ft.colors.OUTLINE),
-            border_radius=8,
-            bgcolor=ft.colors.SURFACE_VARIANT,
         ),
-    ], expand=True, spacing=0)
+    ], spacing=0)
 
     tabs = ft.Tabs(
         tabs=[
@@ -951,16 +1098,43 @@ def build_ui(page: ft.Page):
             ft.Tab(text="🎯 Quiz Master", content=quiz_tab),
         ],
         selected_index=0,
-        height=400,  
+        expand=True,  # Let tabs expand to fill available space
+        tab_alignment=ft.TabAlignment.START,
     )
 
     ai_view = ft.Container(
         ft.Column([
+            # Header section - standardized height to match other tabs
             ft.Container(
-                ft.Text("🤖 AI Assistant", size=18, weight=ft.FontWeight.BOLD, color=PASTEL_PURPLE),
-                padding=ft.padding.only(bottom=25)  # Standardized spacing to match other views
+                ft.Row([
+                    ft.Text("🤖 AI Assistant", size=18, weight=ft.FontWeight.BOLD, color=PASTEL_PURPLE),
+                    ft.Container(expand=True),
+                    ft.Text("Powered by AI", size=12, color=ft.colors.ON_SURFACE, italic=True),
+                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                padding=ft.padding.only(bottom=15),
+                height=60,  # Fixed header height matching other tabs
             ),
-            tabs
+            # Main content area - fixed height for consistency
+            ft.Container(
+                tabs,
+                height=500,  # Fixed height to match other tabs
+                border=ft.border.all(2, PASTEL_PURPLE),
+                border_radius=12,
+                bgcolor=WHITE,
+            ),
+            # Status area - consistent with other tabs
+            ft.Container(
+                ft.Row([
+                    ft.Icon(ft.icons.INFO_OUTLINE, size=16, color=PASTEL_PURPLE),
+                    ft.Text("💡 Tip: Use the tabs above to analyze your notes with AI tools", 
+                           size=12, color=ft.colors.ON_SURFACE, italic=True),
+                ], spacing=8),
+                padding=ft.padding.all(10),
+                height=40,  # Fixed tip area height
+                border_radius=8,
+                bgcolor=ft.colors.SURFACE_VARIANT,
+                margin=ft.margin.only(top=15),
+            ),
         ], spacing=0),
         expand=True,
         border=ft.border.all(2, PASTEL_PURPLE),
