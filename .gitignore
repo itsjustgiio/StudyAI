@@ -40,3 +40,4 @@ data/transcripts/outputs/
 # Local secrets
 .env.local
 .env.*.local
+client_secret.json
