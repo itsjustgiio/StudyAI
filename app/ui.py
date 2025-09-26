@@ -1,4 +1,5 @@
 from __future__ import annotations
+import asyncio
 import flet as ft
 
 
@@ -32,13 +33,30 @@ def build_ui(page: ft.Page):
     page.title = "StudyAI"
     page.theme_mode = ft.ThemeMode.LIGHT
     page.window_width = 1200
-    page.window_height = 800
+    page.window_height = 900  # Increased height for larger notes area
     page.window_min_width = 1000
-    page.window_min_height = 600
+    page.window_min_height = 700  # Increased minimum height
     page.scroll = ft.ScrollMode.AUTO
     page.padding = 0
+    
+    # Resize handler to update navigation when window size changes
+    def on_window_resize(e):
+        # Update navigation container height
+        if nav_container_ref.current and page.window_height:
+            nav_container_ref.current.height = page.window_height - 100
+            nav_container_ref.current.update()
+    
+    page.on_resize = on_window_resize
+    
+    # Custom Pastel Purple Theme Colors
+    PASTEL_PURPLE = "#B19CD9"      # Light pastel purple
+    DARK_PURPLE = "#8B7AB8"        # Darker purple for accents
+    SOFT_PURPLE = "#E6D9F0"        # Very light purple background
+    WHITE = "#FFFFFF"              # Pure white
+    LIGHT_GRAY = "#F8F6FA"         # Very light gray with purple tint
+    TEXT_DARK = "#4A4A4A"          # Dark gray for text
 
-    # --- Refs & state
+    # Refs & state
     nav_index = 0  # 0: Notes, 1: Transcribe, 2: AI
     notes_ref: ft.Ref[ft.TextField] = ft.Ref[ft.TextField]()
     trans_live_ref: ft.Ref[ft.ListView] = ft.Ref[ft.ListView]()
@@ -49,29 +67,19 @@ def build_ui(page: ft.Page):
     quiz_n_ref: ft.Ref[ft.TextField] = ft.Ref[ft.TextField]()
     quiz_list_ref: ft.Ref[ft.ListView] = ft.Ref[ft.ListView]()
 
-    # --- Theme toggle
-    def toggle_theme(_):
-        page.theme_mode = (
-            ft.ThemeMode.DARK if page.theme_mode == ft.ThemeMode.LIGHT else ft.ThemeMode.LIGHT
-        )
-        page.update()
 
-    theme_switch = ft.IconButton(
-        icon=ft.icons.DARK_MODE,
-        tooltip="Toggle theme",
-        on_click=toggle_theme,
-    )
 
-    page.appbar = ft.AppBar(
-        title=ft.Text("StudyAI", size=20, weight=ft.FontWeight.BOLD),
-        center_title=False,
-        bgcolor=ft.colors.SURFACE_VARIANT,
-        actions=[theme_switch],
+    app_bar = ft.AppBar(
+        title=ft.Text("StudyAI", size=24, weight=ft.FontWeight.BOLD),
+        center_title=True,
+        bgcolor=PASTEL_PURPLE,
+        color=WHITE,
     )
 
     # ---------------- Sidebar (NavigationRail)
     # Create a simple container that will hold the current view
     main_content = ft.Container(expand=True)
+    nav_container_ref = ft.Ref[ft.Container]()
     
     # Navigation logic is now handled by nav_button_click functions
 
@@ -82,15 +90,16 @@ def build_ui(page: ft.Page):
         def handler(_):
             current_nav["selected"] = index
             if index == 0:
-                main_content.content = ft.Container(notes_view, expand=True, padding=ft.padding.all(20))
+                main_content.content = ft.Container(notes_view, expand=True, padding=ft.padding.all(10))
             elif index == 1:
-                main_content.content = ft.Container(trans_view, expand=True, padding=ft.padding.all(20))
+                main_content.content = ft.Container(trans_view, expand=True, padding=ft.padding.all(10))
             else:
-                main_content.content = ft.Container(ai_view, expand=True, padding=ft.padding.all(20))
+                main_content.content = ft.Container(ai_view, expand=True, padding=ft.padding.all(10))
+            
             # Update button styles
             for i, btn in enumerate(nav_buttons):
                 btn.style = ft.ButtonStyle(
-                    bgcolor=ft.colors.PRIMARY if i == index else ft.colors.TRANSPARENT,
+                    bgcolor=PASTEL_PURPLE if i == index else ft.colors.SURFACE_VARIANT,
                     color=ft.colors.ON_PRIMARY if i == index else ft.colors.ON_SURFACE,
                 )
             page.update()
@@ -100,11 +109,11 @@ def build_ui(page: ft.Page):
         ft.ElevatedButton(
             content=ft.Row([
                 ft.Icon(ft.icons.NOTE_ALT),
-                ft.Text("Notes")
+                ft.Text("Notes", weight=ft.FontWeight.W_500)
             ], spacing=8),
             on_click=nav_button_click(0),
             style=ft.ButtonStyle(
-                bgcolor=ft.colors.PRIMARY,
+                bgcolor=PASTEL_PURPLE,
                 color=ft.colors.ON_PRIMARY,
             ),
             width=160,
@@ -112,11 +121,11 @@ def build_ui(page: ft.Page):
         ft.ElevatedButton(
             content=ft.Row([
                 ft.Icon(ft.icons.MIC),
-                ft.Text("Transcribe")
+                ft.Text("Transcribe", weight=ft.FontWeight.W_500)
             ], spacing=8),
             on_click=nav_button_click(1),
             style=ft.ButtonStyle(
-                bgcolor=ft.colors.TRANSPARENT,
+                bgcolor=ft.colors.SURFACE_VARIANT,
                 color=ft.colors.ON_SURFACE,
             ),
             width=160,
@@ -124,11 +133,11 @@ def build_ui(page: ft.Page):
         ft.ElevatedButton(
             content=ft.Row([
                 ft.Icon(ft.icons.SMART_TOY),
-                ft.Text("AI Assistant")
+                ft.Text("AI Assistant", weight=ft.FontWeight.W_500)
             ], spacing=8),
             on_click=nav_button_click(2),
             style=ft.ButtonStyle(
-                bgcolor=ft.colors.TRANSPARENT,
+                bgcolor=ft.colors.SURFACE_VARIANT,
                 color=ft.colors.ON_SURFACE,
             ),
             width=160,
@@ -138,24 +147,26 @@ def build_ui(page: ft.Page):
     nav = ft.Column(
         nav_buttons,
         spacing=10,
-        alignment=ft.MainAxisAlignment.START,
+        alignment=ft.MainAxisAlignment.START,  # Start from top, we'll position with container
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-        tight=True,  # Don't expand to fill all available space
+        tight=True,  # Don't expand, keep compact
     )
 
     # Notes view
     toolbar = ft.Row(
         controls=[
-            ft.Text("📝 Notes", size=18, weight=ft.FontWeight.BOLD),
+            ft.Text("📝 Notes", size=18, weight=ft.FontWeight.BOLD, color=PASTEL_PURPLE),
             ft.Container(expand=True),  # Spacer
             ft.ElevatedButton(
                 "Clear",
                 icon=ft.icons.CLEAR,
+                style=ft.ButtonStyle(bgcolor=PASTEL_PURPLE, color=ft.colors.ON_PRIMARY),
                 on_click=lambda _: (setattr(notes_ref.current, "value", ""), page.update()),
             ),
             ft.IconButton(
                 ft.icons.CONTENT_COPY,
                 tooltip="Copy notes",
+                icon_color=PASTEL_PURPLE,
                 on_click=lambda _: page.set_clipboard(notes_ref.current.value or ""),
             ),
         ],
@@ -165,7 +176,8 @@ def build_ui(page: ft.Page):
     notes_editor = ft.TextField(
         ref=notes_ref,
         multiline=True,
-        min_lines=25,
+        min_lines=35,  # Large fixed size to cover majority of screen
+        max_lines=35,  # Fixed height - no expansion
         expand=True,
         hint_text="Type your lecture notes here...\n\nTips:\n• Use bullet points for key concepts\n• Organize thoughts clearly\n• The AI will analyze this content",
         hint_style=ft.TextStyle(color=ft.colors.OUTLINE),
@@ -176,20 +188,21 @@ def build_ui(page: ft.Page):
 
     notes_view = ft.Container(
         ft.Column([
-            ft.Container(toolbar, padding=ft.padding.only(bottom=10)),
+            ft.Container(toolbar, padding=ft.padding.only(bottom=25)),  # Standardized spacing
             ft.Container(
                 notes_editor, 
                 expand=True,
-                border=ft.border.all(1, ft.colors.OUTLINE),
-                border_radius=8,
+                border=ft.border.all(2, PASTEL_PURPLE),
+                border_radius=12,
                 padding=ft.padding.all(8),
+                bgcolor=WHITE,
             ),
         ], expand=True, spacing=0),
         expand=True,
-        border=ft.border.all(1, ft.colors.OUTLINE),
-        border_radius=8,
+        border=ft.border.all(2, PASTEL_PURPLE),
+        border_radius=12,
         padding=ft.padding.all(16),
-        bgcolor=ft.colors.SURFACE_VARIANT,
+        bgcolor=SOFT_PURPLE,
     )
 
     # Transcription view
@@ -201,7 +214,7 @@ def build_ui(page: ft.Page):
                 ft.Text(line, size=14),
                 padding=ft.padding.all(8),
                 margin=ft.margin.only(bottom=4),
-                bgcolor=ft.colors.SURFACE_VARIANT,
+                bgcolor=SOFT_PURPLE,
                 border_radius=6,
             )
         )
@@ -229,10 +242,76 @@ def build_ui(page: ft.Page):
         page.snack_bar.open = True
         page.update()
 
+    # Audio upload handlers
+    current_audio_file = {"file": None}
+    
+    def handle_audio_upload(file):
+        """Handle audio file selection"""
+        if file:
+            current_audio_file["file"] = file
+            upload_status_ref.current.value = f"Selected: {file.name}"
+            transcribe_btn.disabled = False
+        else:
+            current_audio_file["file"] = None
+            upload_status_ref.current.value = "No file selected"
+            transcribe_btn.disabled = True
+        upload_status_ref.current.update()
+        transcribe_btn.update()
+    
+    async def transcribe_audio_file(_):
+        """Transcribe the uploaded audio file"""
+        if not current_audio_file["file"]:
+            return
+            
+        # Clear previous results
+        upload_results_ref.current.controls.clear()
+        
+        # Show processing status
+        upload_results_ref.current.controls.append(
+            ft.Container(
+                ft.Text("🔄 Processing audio file...", size=14, color=PASTEL_PURPLE),
+                padding=ft.padding.all(8),
+                bgcolor=SOFT_PURPLE,
+                border_radius=6,
+            )
+        )
+        upload_results_ref.current.update()
+        
+        # TODO: Implement actual audio transcription
+        model_size = model_size_ref.current.value
+        file_name = current_audio_file["file"].name
+        
+        # Simulate processing time
+        await asyncio.sleep(2)
+        
+        # Show sample result
+        upload_results_ref.current.controls.clear()
+        upload_results_ref.current.controls.extend([
+            ft.Container(
+                ft.Text(f"✅ Transcription complete using {model_size} model", size=14, weight=ft.FontWeight.BOLD),
+                padding=ft.padding.all(8),
+                bgcolor=SOFT_PURPLE,
+                border_radius=6,
+            ),
+            ft.Container(
+                ft.Text(f"File: {file_name}", size=12, italic=True),
+                padding=ft.padding.all(8),
+            ),
+            ft.Container(
+                ft.Text("Sample transcription result would appear here. This is a placeholder for the actual transcription that will be implemented by your team's audio processing module.", 
+                       size=14),
+                padding=ft.padding.all(8),
+                bgcolor=WHITE,
+                border=ft.border.all(1, PASTEL_PURPLE),
+                border_radius=6,
+            ),
+        ])
+        upload_results_ref.current.update()
+
     trans_header = ft.Row([
-        ft.Text("🎙️ Live Transcription", size=18, weight=ft.FontWeight.BOLD),
+        ft.Text("🎙️ Transcription", size=18, weight=ft.FontWeight.BOLD, color=PASTEL_PURPLE),
         ft.Container(expand=True),
-        ft.Text("Status: Ready", size=12, color=ft.colors.OUTLINE),
+        ft.Text("Status: Ready", size=12, color=ft.colors.ON_SURFACE),
     ])
 
     start_btn = ft.ElevatedButton(
@@ -240,8 +319,8 @@ def build_ui(page: ft.Page):
         icon=ft.icons.MIC, 
         on_click=start_trans,
         style=ft.ButtonStyle(
-            bgcolor=ft.colors.GREEN,
-            color=ft.colors.WHITE,
+            bgcolor=PASTEL_PURPLE,
+            color=ft.colors.ON_PRIMARY,
         )
     )
     stop_btn = ft.OutlinedButton(
@@ -250,8 +329,8 @@ def build_ui(page: ft.Page):
         on_click=stop_trans, 
         disabled=True,
         style=ft.ButtonStyle(
-            bgcolor=ft.colors.RED,
-            color=ft.colors.WHITE,
+            bgcolor=DARK_PURPLE,
+            color=ft.colors.ON_PRIMARY,
         )
     )
 
@@ -270,6 +349,77 @@ def build_ui(page: ft.Page):
         auto_scroll=True
     )
 
+    # Audio upload section
+    file_picker = ft.FilePicker(
+        on_result=lambda e: handle_audio_upload(e.files[0] if e.files else None)
+    )
+    
+    # Model size dropdown
+    model_size_ref = ft.Ref[ft.Dropdown]()
+    model_size_dropdown = ft.Dropdown(
+        ref=model_size_ref,
+        width=120,
+        value="base",
+        options=[
+            ft.dropdown.Option("tiny"),
+            ft.dropdown.Option("base"),
+            ft.dropdown.Option("small"),
+            ft.dropdown.Option("medium"),
+            ft.dropdown.Option("large"),
+        ],
+        label="Model Size",
+    )
+    
+    upload_status_ref = ft.Ref[ft.Text]()
+    upload_status = ft.Text(
+        ref=upload_status_ref,
+        value="No file selected",
+        size=12,
+        color=ft.colors.ON_SURFACE,
+    )
+    
+    upload_btn = ft.ElevatedButton(
+        "Upload Audio File",
+        icon=ft.icons.UPLOAD_FILE,
+        on_click=lambda _: file_picker.pick_files(
+            allowed_extensions=["mp3", "wav", "m4a", "flac", "ogg"]
+        ),
+        style=ft.ButtonStyle(
+            bgcolor=PASTEL_PURPLE,
+            color=ft.colors.ON_PRIMARY,
+        )
+    )
+    
+    transcribe_btn = ft.ElevatedButton(
+        "Transcribe Audio",
+        icon=ft.icons.TRANSCRIBE,
+        on_click=transcribe_audio_file,
+        disabled=True,
+        style=ft.ButtonStyle(
+            bgcolor=DARK_PURPLE,
+            color=ft.colors.ON_PRIMARY,
+        )
+    )
+    
+    upload_controls = ft.Column([
+        ft.Row([
+            upload_btn,
+            model_size_dropdown,
+            ft.Container(expand=True),
+            transcribe_btn,
+        ], spacing=10),
+        ft.Container(upload_status, padding=ft.padding.only(top=8)),
+    ], spacing=8)
+    
+    upload_results_ref = ft.Ref[ft.ListView]()
+    upload_results = ft.ListView(
+        ref=upload_results_ref,
+        expand=True,
+        spacing=4,
+        padding=ft.padding.all(12),
+    )
+
+    # Simple transcription view (back to original + upload controls at bottom)
     trans_view = ft.Container(
         ft.Column([
             ft.Container(trans_header, padding=ft.padding.only(bottom=10)),
@@ -277,16 +427,29 @@ def build_ui(page: ft.Page):
             ft.Container(
                 trans_live, 
                 expand=True,
-                border=ft.border.all(1, ft.colors.OUTLINE),
-                border_radius=8,
-                bgcolor=ft.colors.SURFACE,
+                border=ft.border.all(2, PASTEL_PURPLE),
+                border_radius=12,
+                bgcolor=WHITE,
+            ),
+            ft.Divider(height=20, color=PASTEL_PURPLE),
+            ft.Container(
+                ft.Text("📁 Audio File Upload", size=16, weight=ft.FontWeight.BOLD, color=PASTEL_PURPLE),
+                padding=ft.padding.only(bottom=10)
+            ),
+            ft.Container(upload_controls, padding=ft.padding.only(bottom=10)),
+            ft.Container(
+                upload_results,
+                height=150,  # Fixed height for upload results
+                border=ft.border.all(2, PASTEL_PURPLE),
+                border_radius=12,
+                bgcolor=WHITE,
             ),
         ], expand=True, spacing=0),
         expand=True,
-        border=ft.border.all(1, ft.colors.OUTLINE),
-        border_radius=8,
+        border=ft.border.all(2, PASTEL_PURPLE),
+        border_radius=12,
         padding=ft.padding.all(16),
-        bgcolor=ft.colors.SURFACE_VARIANT,
+        bgcolor=SOFT_PURPLE,
     )
 
     sum_mode = ft.Dropdown(
@@ -303,7 +466,7 @@ def build_ui(page: ft.Page):
     sum_btn = ft.ElevatedButton(
         "Generate Summary", 
         icon=ft.icons.SUMMARIZE,
-        style=ft.ButtonStyle(bgcolor=ft.colors.BLUE, color=ft.colors.WHITE)
+        style=ft.ButtonStyle(bgcolor=PASTEL_PURPLE, color=ft.colors.ON_PRIMARY)
     )
     sum_out = ft.Text(
         ref=sum_output_ref, 
@@ -375,7 +538,7 @@ def build_ui(page: ft.Page):
     ask_btn = ft.ElevatedButton(
         "Ask AI", 
         icon=ft.icons.QUESTION_ANSWER,
-        style=ft.ButtonStyle(bgcolor=ft.colors.PURPLE, color=ft.colors.WHITE)
+        style=ft.ButtonStyle(bgcolor=DARK_PURPLE, color=ft.colors.ON_PRIMARY)
     )
     ask_out = ft.Text(
         ref=ask_output_ref, 
@@ -441,7 +604,7 @@ def build_ui(page: ft.Page):
     quiz_btn = ft.ElevatedButton(
         "Generate Quiz", 
         icon=ft.icons.QUIZ,
-        style=ft.ButtonStyle(bgcolor=ft.colors.ORANGE, color=ft.colors.WHITE)
+        style=ft.ButtonStyle(bgcolor=PASTEL_PURPLE, color=ft.colors.ON_PRIMARY)
     )
     quiz_list = ft.ListView(
         ref=quiz_list_ref, 
@@ -536,37 +699,48 @@ def build_ui(page: ft.Page):
     ai_view = ft.Container(
         ft.Column([
             ft.Container(
-                ft.Text("🤖 AI Assistant", size=18, weight=ft.FontWeight.BOLD),
-                padding=ft.padding.only(bottom=15)
+                ft.Text("🤖 AI Assistant", size=18, weight=ft.FontWeight.BOLD, color=PASTEL_PURPLE),
+                padding=ft.padding.only(bottom=25)  # Standardized spacing to match other views
             ),
             tabs
         ], spacing=0),
         expand=True,
-        border=ft.border.all(1, ft.colors.OUTLINE),
-        border_radius=8,
+        border=ft.border.all(2, PASTEL_PURPLE),
+        border_radius=12,
         padding=ft.padding.all(16),
-        bgcolor=ft.colors.SURFACE_VARIANT,
+        bgcolor=SOFT_PURPLE,
     )
 
-    main_content.content = ft.Container(notes_view, expand=True, padding=ft.padding.all(20))
+    main_content.content = ft.Container(notes_view, expand=True, padding=ft.padding.all(10))
+
+    # Create navigation container with reference for dynamic resizing
+    nav_container = ft.Container(
+        ref=nav_container_ref,
+        content=ft.Container(
+            nav,
+            height=300,  # Fixed height container for the nav buttons
+            alignment=ft.alignment.center,  # Center within this fixed height
+        ),
+        width=200,
+        height=page.window_height - 100 if page.window_height else 700,  # Fixed height
+        bgcolor=LIGHT_GRAY,
+        padding=ft.padding.all(12),
+        alignment=ft.alignment.center,  # Center the inner container vertically
+    )
 
     layout = ft.Row([
-        ft.Container(
-            nav,
-            width=200,
-            height=page.window_height - 100 if page.window_height else 700,  # Fixed height
-            bgcolor=ft.colors.SURFACE_VARIANT, 
-            padding=ft.padding.all(12),
-            alignment=ft.alignment.top_left,  
-        ),
-        ft.VerticalDivider(width=1, color=ft.colors.OUTLINE),
+        nav_container,
+        ft.VerticalDivider(width=2, color=PASTEL_PURPLE),
         ft.Container(
             main_content,
             expand=True,
-            alignment=ft.alignment.top_left,  
+            alignment=ft.alignment.top_left,  # Ensure content starts at top
+            bgcolor=WHITE,
         ),
     ], expand=True, spacing=0, alignment=ft.MainAxisAlignment.START)
 
+    # Add file picker to page overlay
+    page.overlay.append(file_picker)
     page.add(layout)
 
 
