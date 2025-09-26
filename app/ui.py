@@ -1,25 +1,53 @@
+# ============================================================================
+# StudyAI UI-ONLY VERSION
+# ============================================================================
+# This file contains ONLY UI components and layout - NO BUSINESS LOGIC
+# 
+# All button clicks are mapped to `lambda e: None` with TODO comments indicating
+# where the actual functionality should be wired from main.py to manager modules:
+# - app/transcription.py (start/stop streaming, captions)
+# - app/summarizer.py (summaries, Q&A)
+# - app/quiz_manager.py (quiz generation)
+# - app/pdf_manager.py (import/export/list PDFs)
+# - app/storage.py (local save/load)
+# - app/agents.py (class management)
+#
+# Team members can implement their functionality in the respective manager files
+# and wire them through main.py by replacing the `lambda e: None` callbacks.
+# ============================================================================
+
 from __future__ import annotations
 import asyncio
 import flet as ft
 
 
+# ============================================================================
+# STUB FUNCTIONS - UI PLACEHOLDERS ONLY
+# These are kept only for UI demo purposes and should NOT be used in production
+# ============================================================================
+
 async def stub_summarize(text: str, mode: str) -> str:
-    return f"[stub] {mode} summary for {len(text.split())} words."
+    """UI PLACEHOLDER - Replace with app/summarizer.py integration"""
+    return f"[UI PLACEHOLDER] {mode} summary for {len(text.split())} words."
 
 async def stub_answer(question: str) -> str:
-    return f"[stub] Answer to: {question}"
+    """UI PLACEHOLDER - Replace with app/agents.py integration"""
+    return f"[UI PLACEHOLDER] Answer to: {question}"
 
 async def stub_make_quiz(source: str, n: int = 5) -> list[tuple[str, str]]:
-    return [(f"Question {i+1}?", "Sample answer") for i in range(n)]
+    """UI PLACEHOLDER - Replace with app/quiz_manager.py integration"""
+    return [(f"[UI PLACEHOLDER] Question {i+1}?", "Sample answer") for i in range(n)]
 
 async def stub_start_transcription(callback):
-    # Pretend to stream a few lines
+    """UI PLACEHOLDER - Replace with app/transcription.py integration"""
+    # Pretend to stream a few lines for UI demo
     import asyncio
     for i in range(3):
         await asyncio.sleep(0.4)
-        await callback(f"(stub) live caption line {i+1}")
+        await callback(f"[UI PLACEHOLDER] live caption line {i+1}")
 
 async def stub_stop_transcription():
+    """UI PLACEHOLDER - Replace with app/transcription.py integration"""
     return None
 
 
@@ -44,31 +72,14 @@ def build_ui(page: ft.Page):
     class_data = {"General": {"notes": "", "transcriptions": [], "ai_history": []}}
     
     def save_current_class_data():
-        """Save current content to the selected class"""
-        current_class = current_classes["selected"]
-        if notes_ref.current and hasattr(notes_ref.current, 'value'):
-            class_data[current_class]["notes"] = notes_ref.current.value or ""
+        """Save current content to the selected class - UI ONLY"""
+        # TODO: Wire in main.py to call appropriate class manager
+        pass
     
     def load_class_data(class_name):
-        """Load data for the selected class"""
-        if class_name in class_data:
-            # Load notes
-            if notes_ref.current and hasattr(notes_ref.current, 'value'):
-                notes_ref.current.value = class_data[class_name]["notes"]
-                notes_ref.current.update()
-            # Clear transcription and AI history for new class (only if they exist and are on page)
-            try:
-                if trans_live_ref.current and hasattr(trans_live_ref.current, 'controls'):
-                    trans_live_ref.current.controls.clear()
-                    trans_live_ref.current.update()
-            except:
-                pass  # Ignore if not on page yet
-            try:
-                if upload_results_ref.current and hasattr(upload_results_ref.current, 'controls'):
-                    upload_results_ref.current.controls.clear()
-                    upload_results_ref.current.update()
-            except:
-                pass  # Ignore if not on page yet
+        """Load data for the selected class - UI ONLY"""
+        # TODO: Wire in main.py to call appropriate class manager
+        pass
     
     # Remove dynamic resize handler to prevent navigation movement
     # Navigation will now stay fixed in position regardless of content changes
@@ -87,13 +98,9 @@ def build_ui(page: ft.Page):
     new_class_name_ref = ft.Ref[ft.TextField]()
     
     def on_class_change(e):
-        """Handle class selection change"""
-        save_current_class_data()  # Save current class data
-        current_classes["selected"] = e.control.value
-        load_class_data(e.control.value)  # Load new class data
-        page.snack_bar = ft.SnackBar(ft.Text(f"📚 Switched to class: {e.control.value}"))
-        page.snack_bar.open = True
-        page.update()
+        """Handle class selection change - UI ONLY"""
+        # TODO: Wire in main.py to call appropriate class manager
+        pass
     
     class_dropdown = ft.Dropdown(
         ref=class_dropdown_ref,
@@ -172,8 +179,8 @@ def build_ui(page: ft.Page):
             padding=ft.padding.all(10),
         ),
         actions=[
-            ft.TextButton("Cancel", on_click=close_add_class_dialog),
-            ft.ElevatedButton("Add Class", on_click=add_new_class, style=ft.ButtonStyle(bgcolor=PASTEL_PURPLE)),
+            ft.TextButton("Cancel", on_click=lambda e: None),  # TODO: was `close_add_class_dialog` → wire in main.py to call appropriate manager via main.py
+            ft.ElevatedButton("Add Class", on_click=lambda e: None, style=ft.ButtonStyle(bgcolor=PASTEL_PURPLE)),  # TODO: was `add_new_class` → wire in main.py to call appropriate manager via main.py
         ],
         actions_alignment=ft.MainAxisAlignment.END,
     )
@@ -181,7 +188,7 @@ def build_ui(page: ft.Page):
     add_class_btn = ft.IconButton(
         icon=ft.icons.ADD,
         tooltip="Add New Class",
-        on_click=open_add_class_dialog,
+        on_click=lambda e: None,  # TODO: was `open_add_class_dialog` → wire in main.py to call appropriate manager via main.py
         icon_color=WHITE,
     )
 
@@ -223,6 +230,7 @@ def build_ui(page: ft.Page):
     current_nav = {"selected": 0}
     
     def nav_button_click(index):
+        """Navigation button click handler - FUNCTIONAL"""
         def handler(_):
             current_nav["selected"] = index
             if index == 0:
@@ -292,40 +300,9 @@ def build_ui(page: ft.Page):
     current_document = {"file": None, "content": ""}
     
     def handle_document_upload(file):
-        """Handle PDF/DOC file selection and processing"""
-        if file:
-            current_document["file"] = file
-            document_status_ref.current.value = f"📄 Loaded: {file.name}"
-            
-            # TODO: Extract text content from PDF/DOC file
-            # This is a placeholder - your team will implement actual file parsing
-            if file.name.lower().endswith('.pdf'):
-                extracted_text = f"[PDF Content from {file.name}]\n\nThis is placeholder text extracted from the PDF file. Your team will implement actual PDF text extraction using libraries like PyPDF2 or pdfplumber.\n\nSample content that would be extracted from the document..."
-            elif file.name.lower().endswith(('.doc', '.docx')):
-                extracted_text = f"[DOC Content from {file.name}]\n\nThis is placeholder text extracted from the Word document. Your team will implement actual DOC text extraction using libraries like python-docx.\n\nSample content that would be extracted from the document..."
-            else:
-                extracted_text = f"[Document Content from {file.name}]\n\nUnsupported file type. Please upload PDF or DOC files."
-            
-            current_document["content"] = extracted_text
-            
-            # Add extracted content to notes
-            current_notes = notes_ref.current.value or ""
-            if current_notes:
-                notes_ref.current.value = current_notes + "\n\n" + extracted_text
-            else:
-                notes_ref.current.value = extracted_text
-                
-            notes_ref.current.update()
-            document_status_ref.current.update()
-            
-            page.snack_bar = ft.SnackBar(ft.Text(f"✅ Document content added to notes: {file.name}"))
-            page.snack_bar.open = True
-            page.update()
-        else:
-            current_document["file"] = None
-            current_document["content"] = ""
-            document_status_ref.current.value = "No document loaded"
-            document_status_ref.current.update()
+        """Handle PDF/DOC file selection and processing - UI ONLY"""
+        # TODO: Wire in main.py to call app/pdf_manager.py (import/export/list PDFs)
+        pass
 
     # Document file picker
     document_picker = ft.FilePicker(
@@ -350,28 +327,19 @@ def build_ui(page: ft.Page):
                 "Upload Document",
                 icon=ft.icons.UPLOAD_FILE,
                 style=ft.ButtonStyle(bgcolor=DARK_PURPLE, color=ft.colors.ON_PRIMARY),
-                on_click=lambda _: document_picker.pick_files(
-                    allowed_extensions=["pdf", "doc", "docx"]
-                ),
+                on_click=lambda e: None,  # TODO: was `lambda _: document_picker.pick_files(allowed_extensions=["pdf", "doc", "docx"])` → wire in main.py to call app/pdf_manager.py (import/export/list PDFs)
             ),
             ft.ElevatedButton(
                 "Clear",
                 icon=ft.icons.CLEAR,
                 style=ft.ButtonStyle(bgcolor=PASTEL_PURPLE, color=ft.colors.ON_PRIMARY),
-                on_click=lambda _: (
-                    setattr(notes_ref.current, "value", ""),
-                    setattr(current_document, "file", None),
-                    setattr(current_document, "content", ""),
-                    setattr(document_status_ref.current, "value", "No document loaded"),
-                    document_status_ref.current.update(),
-                    page.update()
-                ),
+                on_click=lambda e: None,  # TODO: was `lambda _: (clear notes and document)` → wire in main.py to call app/pdf_manager.py (import/export/list PDFs)
             ),
             ft.IconButton(
                 ft.icons.CONTENT_COPY,
                 tooltip="Copy notes",
                 icon_color=PASTEL_PURPLE,
-                on_click=lambda _: page.set_clipboard(notes_ref.current.value or ""),
+                on_click=lambda e: None,  # TODO: was `lambda _: page.set_clipboard(notes_ref.current.value or "")` → wire in main.py to call app/storage.py (local save/load)
             ),
         ],
         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
@@ -435,104 +403,32 @@ def build_ui(page: ft.Page):
     trans_running = {"on": False}
 
     async def handle_transcription_line(line: str):
-        trans_live_ref.current.controls.append(
-            ft.Container(
-                ft.Text(line, size=14),
-                padding=ft.padding.all(8),
-                margin=ft.margin.only(bottom=4),
-                bgcolor=SOFT_PURPLE,
-                border_radius=6,
-            )
-        )
-        trans_live_ref.current.update()
+        """Handle transcription line - UI ONLY"""
+        # TODO: Wire in main.py to call app/transcription.py
+        pass
 
     async def start_trans(_):
-        if trans_running["on"]:
-            return
-        trans_running["on"] = True
-        start_btn.disabled = True
-        stop_btn.disabled = False
-        page.snack_bar = ft.SnackBar(ft.Text("🎙️ Starting transcription (demo mode)"))
-        page.snack_bar.open = True
-        page.update()
-        await stub_start_transcription(handle_transcription_line)
+        """Start transcription - UI ONLY"""
+        # TODO: Wire in main.py to call app/transcription.py (start/stop streaming, captions)
+        pass
 
     async def stop_trans(_):
-        if not trans_running["on"]:
-            return
-        trans_running["on"] = False
-        await stub_stop_transcription()
-        start_btn.disabled = False
-        stop_btn.disabled = True
-        page.snack_bar = ft.SnackBar(ft.Text("⏹️ Stopped transcription"))
-        page.snack_bar.open = True
-        page.update()
+        """Stop transcription - UI ONLY"""
+        # TODO: Wire in main.py to call app/transcription.py (start/stop streaming, captions)
+        pass
 
     # Audio upload handlers
     current_audio_file = {"file": None}
     
     def handle_audio_upload(file):
-        """Handle audio file selection"""
-        if file:
-            current_audio_file["file"] = file
-            upload_status_ref.current.value = f"Selected: {file.name}"
-            transcribe_btn.disabled = False
-        else:
-            current_audio_file["file"] = None
-            upload_status_ref.current.value = "No file selected"
-            transcribe_btn.disabled = True
-        upload_status_ref.current.update()
-        transcribe_btn.update()
+        """Handle audio file selection - UI ONLY"""
+        # TODO: Wire in main.py to call app/transcription.py
+        pass
     
     async def transcribe_audio_file(_):
-        """Transcribe the uploaded audio file"""
-        if not current_audio_file["file"]:
-            return
-            
-        # Clear previous results
-        upload_results_ref.current.controls.clear()
-        
-        # Show processing status
-        upload_results_ref.current.controls.append(
-            ft.Container(
-                ft.Text("🔄 Processing audio file...", size=14, color=PASTEL_PURPLE),
-                padding=ft.padding.all(8),
-                bgcolor=SOFT_PURPLE,
-                border_radius=6,
-            )
-        )
-        upload_results_ref.current.update()
-        
-        # TODO: Implement actual audio transcription
-        model_size = model_size_ref.current.value
-        file_name = current_audio_file["file"].name
-        
-        # Simulate processing time
-        await asyncio.sleep(2)
-        
-        # Show sample result
-        upload_results_ref.current.controls.clear()
-        upload_results_ref.current.controls.extend([
-            ft.Container(
-                ft.Text(f"✅ Transcription complete using {model_size} model", size=14, weight=ft.FontWeight.BOLD),
-                padding=ft.padding.all(8),
-                bgcolor=SOFT_PURPLE,
-                border_radius=6,
-            ),
-            ft.Container(
-                ft.Text(f"File: {file_name}", size=12, italic=True),
-                padding=ft.padding.all(8),
-            ),
-            ft.Container(
-                ft.Text("Sample transcription result would appear here. This is a placeholder for the actual transcription that will be implemented by your team's audio processing module.", 
-                       size=14),
-                padding=ft.padding.all(8),
-                bgcolor=WHITE,
-                border=ft.border.all(1, PASTEL_PURPLE),
-                border_radius=6,
-            ),
-        ])
-        upload_results_ref.current.update()
+        """Transcribe the uploaded audio file - UI ONLY"""
+        # TODO: Wire in main.py to call app/transcription.py
+        pass
 
     trans_header = ft.Row([
         ft.Text("🎙️ Transcription", size=18, weight=ft.FontWeight.BOLD, color=PASTEL_PURPLE),
@@ -543,7 +439,7 @@ def build_ui(page: ft.Page):
     start_btn = ft.ElevatedButton(
         "Start Recording", 
         icon=ft.icons.MIC, 
-        on_click=start_trans,
+        on_click=lambda e: None,  # TODO: was `start_trans` → wire in main.py to call app/transcription.py (start/stop streaming, captions)
         style=ft.ButtonStyle(
             bgcolor=PASTEL_PURPLE,
             color=ft.colors.ON_PRIMARY,
@@ -552,7 +448,7 @@ def build_ui(page: ft.Page):
     stop_btn = ft.OutlinedButton(
         "Stop Recording", 
         icon=ft.icons.STOP, 
-        on_click=stop_trans, 
+        on_click=lambda e: None,  # TODO: was `stop_trans` → wire in main.py to call app/transcription.py (start/stop streaming, captions)
         disabled=True,
         style=ft.ButtonStyle(
             bgcolor=DARK_PURPLE,
@@ -613,9 +509,7 @@ def build_ui(page: ft.Page):
     upload_btn = ft.ElevatedButton(
         "Upload Audio File",
         icon=ft.icons.UPLOAD_FILE,
-        on_click=lambda _: file_picker.pick_files(
-            allowed_extensions=["mp3", "wav", "m4a", "flac", "ogg"]
-        ),
+        on_click=lambda e: None,  # TODO: was `lambda _: file_picker.pick_files(allowed_extensions=["mp3", "wav", "m4a", "flac", "ogg"])` → wire in main.py to call app/pdf_manager.py (import/export/list PDFs)
         style=ft.ButtonStyle(
             bgcolor=PASTEL_PURPLE,
             color=ft.colors.ON_PRIMARY,
@@ -625,7 +519,7 @@ def build_ui(page: ft.Page):
     transcribe_btn = ft.ElevatedButton(
         "Transcribe Audio",
         icon=ft.icons.TRANSCRIBE,
-        on_click=transcribe_audio_file,
+        on_click=lambda e: None,  # TODO: was `transcribe_audio_file` → wire in main.py to call app/transcription.py (start/stop streaming, captions)
         disabled=True,
         style=ft.ButtonStyle(
             bgcolor=DARK_PURPLE,
@@ -776,43 +670,11 @@ def build_ui(page: ft.Page):
     )
 
     async def do_summarize(_):
-        text = notes_ref.current.value or ""
-        document_content = current_document.get("content", "")
-        
-        # Combine notes and document content
-        combined_text = ""
-        if text.strip():
-            combined_text += text.strip()
-        if document_content.strip():
-            if combined_text:
-                combined_text += "\n\n" + document_content.strip()
-            else:
-                combined_text = document_content.strip()
-        
-        if not combined_text.strip():
-            page.snack_bar = ft.SnackBar(ft.Text("📝 Please add some notes or upload a document first!"))
-            page.snack_bar.open = True
-            page.update()
-            return
-            
-        mode = sum_mode_ref.current.value
-        sum_btn.disabled = True
-        sum_btn.text = "Generating..."
-        page.update()
-        
-        # Enhanced prompt to indicate source
-        source_info = ""
-        if current_document.get("file"):
-            source_info = f" (including content from {current_document['file'].name})"
-        
-        result = await stub_summarize(combined_text, mode)
-        result += source_info
-        sum_output_ref.current.value = result
-        sum_btn.disabled = False
-        sum_btn.text = "Generate Summary"
-        page.update()
+        """Generate summary - UI ONLY"""
+        # TODO: Wire in main.py to call app/summarizer.py (summaries, Q&A)
+        pass
 
-    sum_btn.on_click = do_summarize
+    sum_btn.on_click = lambda e: None  # TODO: was `do_summarize` → wire in main.py to call app/summarizer.py (summaries, Q&A)
 
     summarizer_tab = ft.Column([
         # Controls section  
@@ -882,45 +744,11 @@ def build_ui(page: ft.Page):
     )
 
     async def do_ask(_):
-        q = ask_input_ref.current.value or ""
-        if not q.strip():
-            page.snack_bar = ft.SnackBar(ft.Text("❓ Please enter a question first!"))
-            page.snack_bar.open = True
-            page.update()
-            return
-            
-        ask_btn.disabled = True
-        ask_btn.text = "Thinking..."
-        page.update()
-        
-        # Enhanced question with context from notes and documents
-        context = ""
-        notes_text = notes_ref.current.value or ""
-        document_content = current_document.get("content", "")
-        
-        if notes_text.strip() or document_content.strip():
-            context += "\nContext from notes and documents:\n"
-            if notes_text.strip():
-                context += f"Notes: {notes_text.strip()}\n"
-            if document_content.strip():
-                doc_name = current_document.get("file", {}).get("name", "uploaded document")
-                context += f"Document ({doc_name}): {document_content.strip()}\n"
-        
-        enhanced_question = q + context
-        ans = await stub_answer(enhanced_question)
-        
-        # Add source information to response
-        if current_document.get("file"):
-            ans += f"\n\n(Answer generated using context from your notes and {current_document['file'].name})"
-        elif notes_text.strip():
-            ans += f"\n\n(Answer generated using context from your notes)"
-        
-        ask_output_ref.current.value = ans
-        ask_btn.disabled = False
-        ask_btn.text = "Ask AI"
-        page.update()
+        """Ask AI question - UI ONLY"""
+        # TODO: Wire in main.py to call appropriate manager via main.py
+        pass
 
-    ask_btn.on_click = do_ask
+    ask_btn.on_click = lambda e: None  # TODO: was `do_ask` → wire in main.py to call appropriate manager via main.py
 
     study_tab = ft.Column([
         # Question section
@@ -984,70 +812,11 @@ def build_ui(page: ft.Page):
     )
 
     async def do_quiz(_):
-        notes_text = notes_ref.current.value or ""
-        document_content = current_document.get("content", "")
-        
-        # Combine notes and document content
-        combined_text = ""
-        if notes_text.strip():
-            combined_text += notes_text.strip()
-        if document_content.strip():
-            if combined_text:
-                combined_text += "\n\n" + document_content.strip()
-            else:
-                combined_text = document_content.strip()
-        
-        if not combined_text.strip():
-            page.snack_bar = ft.SnackBar(ft.Text("📝 Please add some notes or upload a document first!"))
-            page.snack_bar.open = True
-            page.update()
-            return
-            
-        try:
-            n = max(1, min(20, int(quiz_n_ref.current.value)))
-        except Exception:
-            n = 5
-        quiz_btn.disabled = True
-        quiz_btn.text = "Generating..."
-        page.update()
-        qa = await stub_make_quiz(combined_text, n)
-        quiz_list_ref.current.controls.clear()
-        for i, (q, a) in enumerate(qa, 1):
-            quiz_list_ref.current.controls.append(
-                ft.Container(
-                    ft.Column([
-                        ft.Container(
-                            ft.Text(
-                                f"Question {i}", 
-                                size=14, 
-                                weight=ft.FontWeight.BOLD, 
-                                color=WHITE
-                            ),
-                            padding=ft.padding.all(8),
-                            bgcolor=PASTEL_PURPLE,
-                            border_radius=6,
-                            margin=ft.margin.only(bottom=10),
-                        ),
-                        ft.Text(q, size=14, weight=ft.FontWeight.W_500, color=ft.colors.BLACK),
-                        ft.Container(height=12),
-                        ft.Container(
-                            ft.Text("Answer:", size=12, weight=ft.FontWeight.BOLD, color=DARK_PURPLE),
-                            padding=ft.padding.only(bottom=5),
-                        ),
-                        ft.Text(a, size=13, color=ft.colors.ON_SURFACE),
-                    ], spacing=0),
-                    padding=ft.padding.all(18),
-                    border=ft.border.all(2, PASTEL_PURPLE),
-                    border_radius=12,
-                    bgcolor=WHITE,
-                    margin=ft.margin.only(bottom=8),
-                )
-            )
-        quiz_btn.disabled = False
-        quiz_btn.text = "Generate Quiz"
-        quiz_list_ref.current.update()
+        """Generate quiz - UI ONLY"""
+        # TODO: Wire in main.py to call app/quiz_manager.py (quiz generation)
+        pass
 
-    quiz_btn.on_click = do_quiz
+    quiz_btn.on_click = lambda e: None  # TODO: was `do_quiz` → wire in main.py to call app/quiz_manager.py (quiz generation)
 
     quiz_tab = ft.Column([
         # Controls section
@@ -1177,3 +946,4 @@ def build_ui(page: ft.Page):
 
 
 # End of file
+
