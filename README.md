@@ -4,9 +4,9 @@ StudyAI ✏️
 Too often, students fall behind due to fast-paced teaching, unclear explanations, or distractions. StudyAI bridges these gaps by transforming raw lectures into **personalized, accessible, and actionable study material**.
 -----
 
-## 🚀 Features
+## Features
 
-### 📌 Core Capabilities
+### Core Capabilities
 **Capture** → Upload or record lecture audio with real-time transcription (Whisper).  
 **Condense** → Summarize lectures in three modes:
   - *Topics Only* → Quick review of key concepts  
@@ -62,6 +62,8 @@ LectureAI/
 │   ├── drive_api.py
 │   ├── docs_api.py
 │   └── gemini_api.py
+``````
+-----
 
 
 
