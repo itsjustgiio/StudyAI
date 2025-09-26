@@ -74,6 +74,37 @@ Follow these steps to set up **StudyAI** locally:
 git clone https://github.com/itsjustgiio/StudyAI.git
 cd StudyAI
 
+# 2. (Optional but recommended) Create & activate a virtual environment
+
+# On macOS/Linux:
+python3 -m venv venv
+source venv/bin/activate
+
+# On Windows:
+python -m venv venv
+venv\Scripts\activate
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. Set up environment variables or API keys
+
+# Copy .env.example to .env (if provided)
+cp .env.example .env
+
+# Then add your API keys/credentials, such as:
+# OPENAI_API_KEY=
+# GOOGLE_DRIVE_CLIENT_ID=
+# GOOGLE_DRIVE_CLIENT_SECRET=
+# GEMINI_API_KEY=
+# etc.
+
+# 5. Run the app
+python main.py
+```
+------
+
+
 
 
 
