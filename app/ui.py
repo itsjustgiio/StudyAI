@@ -19,6 +19,7 @@
 from __future__ import annotations
 import asyncio
 import flet as ft
+from .landing_page import create_landing_page
 
 
 # ============================================================================
@@ -64,12 +65,35 @@ def build_ui(page: ft.Page, callbacks=None):
     
     page.title = "StudyAI"
     page.theme_mode = ft.ThemeMode.LIGHT
-    page.window_width = 1200
-    page.window_height = 900  # Increased height for larger notes area
+    page.window_width = 1400  # Larger default width
+    page.window_height = 1000  # Larger default height
     page.window_min_width = 1000
-    page.window_min_height = 700  # Increased minimum height
+    page.window_min_height = 700
+    page.window_maximized = True  # Start maximized for full screen experience
+    page.spacing = 0  # Remove any default spacing
+    page.padding = 0  # Remove any default padding
     page.scroll = ft.ScrollMode.AUTO
     page.padding = 0
+    
+    # App state
+    app_state = {"show_landing": True}
+    
+    # Main container that switches between landing and app
+    main_container = ft.Container(expand=True)
+    
+    # Navigation functions (defined early so they can be used in app bar)
+    def enter_main_app(e=None):
+        """Navigate from landing page to main application"""
+        app_state["show_landing"] = False
+        # App bar and content will be set after they're defined
+        page.update()
+    
+    def return_to_landing(e=None):
+        """Navigate back to landing page from main app"""
+        app_state["show_landing"] = True
+        page.appbar = None  # Hide app bar
+        main_container.content = create_landing_page(page, enter_main_app)
+        page.update()
     
     # Class management system
     current_classes = {"classes": ["General"], "selected": "General"}
@@ -219,12 +243,22 @@ def build_ui(page: ft.Page, callbacks=None):
         on_click=callbacks.get('connect_drive', lambda e: None),
     )
 
+    # Back to Landing button
+    back_to_landing_btn = ft.IconButton(
+        icon=ft.icons.HOME,
+        tooltip="Back to Landing Page",
+        on_click=return_to_landing,
+        icon_color=WHITE,
+    )
+    
     app_bar = ft.AppBar(
         title=ft.Text("StudyAI", size=24, weight=ft.FontWeight.BOLD),
         center_title=False,
         bgcolor=PASTEL_PURPLE,
         color=WHITE,
         actions=[
+            back_to_landing_btn,
+            ft.VerticalDivider(width=1, color=WHITE),  # Separator
             ft.Text("Class:", size=14, color=WHITE),
             class_dropdown,
             add_class_btn,
@@ -243,23 +277,12 @@ def build_ui(page: ft.Page, callbacks=None):
     # Create custom navigation buttons instead of NavigationRail
     current_nav = {"selected": 0}
     
+    # Navigation handler will be defined after all views are created
     def nav_button_click(index):
         """Navigation button click handler - FUNCTIONAL"""
         def handler(_):
             current_nav["selected"] = index
-            if index == 0:
-                main_content.content = ft.Container(notes_view, expand=True, padding=ft.padding.all(10))
-            elif index == 1:
-                main_content.content = ft.Container(trans_view, expand=True, padding=ft.padding.all(10))
-            else:
-                main_content.content = ft.Container(ai_view, expand=True, padding=ft.padding.all(10))
-            
-            # Update button styles
-            for i, btn in enumerate(nav_buttons):
-                btn.style = ft.ButtonStyle(
-                    bgcolor=PASTEL_PURPLE if i == index else ft.colors.SURFACE_VARIANT,
-                    color=ft.colors.ON_PRIMARY if i == index else ft.colors.ON_SURFACE,
-                )
+            # Views will be referenced after they're defined
             page.update()
         return handler
     
@@ -302,8 +325,29 @@ def build_ui(page: ft.Page, callbacks=None):
         ),
     ]
     
+    # Back to Landing button for sidebar
+    back_to_landing_nav_btn = ft.OutlinedButton(
+        content=ft.Row([
+            ft.Icon(ft.icons.HOME, size=18),
+            ft.Text("Home", weight=ft.FontWeight.W_500, size=14)
+        ], spacing=6),
+        on_click=return_to_landing,
+        style=ft.ButtonStyle(
+            bgcolor=ft.colors.TRANSPARENT,
+            color=DARK_PURPLE,
+            side=ft.BorderSide(width=1, color=DARK_PURPLE),
+        ),
+        width=160,
+        height=35,
+    )
+    
     nav = ft.Column(
-        nav_buttons,
+        nav_buttons + [
+            ft.Container(height=20),  # Spacer
+            ft.Divider(color=PASTEL_PURPLE, height=1),
+            ft.Container(height=10),  # Small spacer
+            back_to_landing_nav_btn,
+        ],
         spacing=10,
         alignment=ft.MainAxisAlignment.START,  # Start from top, we'll position with container
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -462,8 +506,7 @@ def build_ui(page: ft.Page, callbacks=None):
     stop_btn = ft.OutlinedButton(
         "Stop Recording", 
         icon=ft.icons.STOP, 
-        on_click=lambda e: None,  # TODO: was `stop_trans` → wire in main.py to call app/transcription.py (start/stop streaming, captions)
-        disabled=True,
+        on_click=callbacks.get('stop_recording', lambda e: None),
         style=ft.ButtonStyle(
             bgcolor=DARK_PURPLE,
             color=ft.colors.ON_PRIMARY,
@@ -558,6 +601,93 @@ def build_ui(page: ft.Page, callbacks=None):
         padding=ft.padding.all(12),
     )
 
+    # Live Transcription tab content
+    live_transcription_tab = ft.Column([
+        # Controls section
+        ft.Container(
+            ft.Column([
+                ft.Row([
+                    ft.Icon(ft.icons.MIC, color=PASTEL_PURPLE, size=20),
+                    ft.Text("Live Transcription", size=16, weight=ft.FontWeight.BOLD),
+                ], spacing=8),
+                ft.Text("Record audio in real-time and get live transcription", size=12, color=ft.colors.OUTLINE),
+                ft.Container(height=10),
+                ft.Container(trans_controls, height=50),
+            ]),
+            padding=ft.padding.all(16),
+            height=130,
+        ),
+        ft.Container(height=15),
+        # Transcription output section
+        ft.Container(
+            ft.Column([
+                ft.Row([
+                    ft.Icon(ft.icons.SUBTITLES, color=PASTEL_PURPLE, size=16),
+                    ft.Text("Live Transcription Output:", weight=ft.FontWeight.W_500),
+                ], spacing=8),
+                ft.Container(height=8),
+                ft.Container(
+                    trans_live,
+                    expand=True,
+                    border=ft.border.all(1, PASTEL_PURPLE),
+                    border_radius=8,
+                    bgcolor=WHITE,
+                ),
+            ]),
+            padding=ft.padding.all(12),
+            expand=True,
+        ),
+    ], spacing=0)
+
+    # Audio File Upload tab content
+    audio_upload_tab = ft.Column([
+        # Controls section
+        ft.Container(
+            ft.Column([
+                ft.Row([
+                    ft.Icon(ft.icons.UPLOAD_FILE, color=PASTEL_PURPLE, size=20),
+                    ft.Text("Audio File Upload", size=16, weight=ft.FontWeight.BOLD),
+                ], spacing=8),
+                ft.Text("Upload audio files for batch transcription processing", size=12, color=ft.colors.OUTLINE),
+                ft.Container(height=10),
+                ft.Container(upload_controls, height=80),
+            ]),
+            padding=ft.padding.all(16),
+            height=130,
+        ),
+        ft.Container(height=15),
+        # Upload results section
+        ft.Container(
+            ft.Column([
+                ft.Row([
+                    ft.Icon(ft.icons.LIST_ALT, color=PASTEL_PURPLE, size=16),
+                    ft.Text("Transcription Results:", weight=ft.FontWeight.W_500),
+                ], spacing=8),
+                ft.Container(height=8),
+                ft.Container(
+                    upload_results,
+                    expand=True,
+                    border=ft.border.all(1, PASTEL_PURPLE),
+                    border_radius=8,
+                    bgcolor=WHITE,
+                ),
+            ]),
+            padding=ft.padding.all(12),
+            expand=True,
+        ),
+    ], spacing=0)
+
+    # Transcription tabs
+    transcription_tabs = ft.Tabs(
+        tabs=[
+            ft.Tab(text="🎙️ Live Recording", content=live_transcription_tab),
+            ft.Tab(text="📁 File Upload", content=audio_upload_tab),
+        ],
+        selected_index=0,
+        expand=True,
+        tab_alignment=ft.TabAlignment.START,
+    )
+
     # Uniform transcription view - standardized to match other tabs
     trans_view = ft.Container(
         ft.Column([
@@ -569,59 +699,7 @@ def build_ui(page: ft.Page, callbacks=None):
             ),
             # Main content area - fixed height for consistency
             ft.Container(
-                ft.Column([
-                    # Live transcription section (top half)
-                    ft.Container(
-                        ft.Column([
-                            ft.Row([
-                                ft.Icon(ft.icons.MIC, color=PASTEL_PURPLE, size=16),
-                                ft.Text("Live Transcription", size=14, weight=ft.FontWeight.BOLD, color=PASTEL_PURPLE),
-                            ], spacing=8),
-                            ft.Container(height=8),
-                            ft.Container(trans_controls, height=50),  # Compact controls
-                            ft.Container(height=8),
-                            ft.Container(
-                                trans_live,
-                                expand=True,
-                                border=ft.border.all(1, PASTEL_PURPLE),
-                                border_radius=8,
-                                bgcolor=WHITE,
-                            ),
-                        ], spacing=0),
-                        height=245,  # Increased to split evenly (245 + 5 + 245 = 495, leaving 5px for container padding)
-                        padding=ft.padding.all(12),
-                        border=ft.border.all(2, PASTEL_PURPLE),
-                        border_radius=12,
-                        bgcolor=SOFT_PURPLE,
-                    ),
-                    
-                    ft.Container(height=5),  # Minimal spacing between sections
-                    
-                    # Audio upload section (bottom half)
-                    ft.Container(
-                        ft.Column([
-                            ft.Row([
-                                ft.Icon(ft.icons.UPLOAD_FILE, color=PASTEL_PURPLE, size=16),
-                                ft.Text("Audio File Upload", size=14, weight=ft.FontWeight.BOLD, color=PASTEL_PURPLE),
-                            ], spacing=8),
-                            ft.Container(height=8),
-                            ft.Container(upload_controls, height=80),  # Upload controls
-                            ft.Container(height=8),
-                            ft.Container(
-                                upload_results,
-                                expand=True,
-                                border=ft.border.all(1, PASTEL_PURPLE),
-                                border_radius=8,
-                                bgcolor=WHITE,
-                            ),
-                        ], spacing=0),
-                        height=245,  # Same height for perfect split
-                        padding=ft.padding.all(12),
-                        border=ft.border.all(2, PASTEL_PURPLE),
-                        border_radius=12,
-                        bgcolor=SOFT_PURPLE,
-                    ),
-                ], spacing=0),
+                transcription_tabs,
                 height=500,  # Fixed height to match other tabs
                 border=ft.border.all(2, PASTEL_PURPLE),
                 border_radius=12,
@@ -926,6 +1004,32 @@ def build_ui(page: ft.Page, callbacks=None):
         bgcolor=SOFT_PURPLE,
     )
 
+    # Now that all views are defined, create the proper navigation handler
+    def create_nav_handler(index):
+        """Create navigation handler with proper view references"""
+        def handler(_):
+            current_nav["selected"] = index
+            if index == 0:
+                main_content.content = ft.Container(notes_view, expand=True, padding=ft.padding.all(10))
+            elif index == 1:
+                main_content.content = ft.Container(trans_view, expand=True, padding=ft.padding.all(10))
+            else:
+                main_content.content = ft.Container(ai_view, expand=True, padding=ft.padding.all(10))
+            
+            # Update button styles
+            for i, btn in enumerate(nav_buttons):
+                btn.style = ft.ButtonStyle(
+                    bgcolor=PASTEL_PURPLE if i == index else ft.colors.SURFACE_VARIANT,
+                    color=ft.colors.ON_PRIMARY if i == index else ft.colors.ON_SURFACE,
+                )
+            page.update()
+        return handler
+
+    # Update navigation button handlers with proper references
+    nav_buttons[0].on_click = create_nav_handler(0)
+    nav_buttons[1].on_click = create_nav_handler(1)
+    nav_buttons[2].on_click = create_nav_handler(2)
+
     main_content.content = ft.Container(notes_view, expand=True, padding=ft.padding.all(10))
 
     # Create navigation container with truly fixed center-left positioning
@@ -942,7 +1046,8 @@ def build_ui(page: ft.Page, callbacks=None):
         padding=ft.padding.all(12),
     )
 
-    layout = ft.Row([
+    # Main app layout
+    main_app_layout = ft.Row([
         nav_container,
         ft.VerticalDivider(width=2, color=PASTEL_PURPLE),
         ft.Container(
@@ -953,10 +1058,28 @@ def build_ui(page: ft.Page, callbacks=None):
         ),
     ], expand=True, spacing=0, alignment=ft.MainAxisAlignment.START)
 
+    # Complete the enter_main_app function now that we have all components
+    def complete_enter_main_app(e=None):
+        """Navigate from landing page to main application"""
+        app_state["show_landing"] = False
+        page.appbar = app_bar  # Show app bar with back button
+        main_container.content = main_app_layout
+        page.update()
+    
+    # Replace the enter_main_app function reference
+    enter_main_app = complete_enter_main_app
+    
+    # Show landing page initially
+    if app_state["show_landing"]:
+        page.appbar = None  # Hide app bar on landing page
+        main_container.content = create_landing_page(page, enter_main_app)
+    else:
+        page.appbar = app_bar
+        main_container.content = main_app_layout
+
     # Add overlays and components to page
-    page.appbar = app_bar
     page.overlay.extend([file_picker, add_class_dialog, document_picker])
-    page.add(layout)
+    page.add(main_container)
 
 
 # End of file
