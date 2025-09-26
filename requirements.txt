@@ -2,7 +2,7 @@
 flet==0.25.0             # Cross-platform UI framework
 
 # Audio & Speech
-openai-whisper==20231117 # Whisper transcription
+git+https://github.com/openai/whisper.git   # Whisper transcription (install from GitHub)
 pyaudio==0.2.14          # Microphone input (optional for live transcription)
 soundfile==0.12.1        # Audio file handling
 numpy==1.26.4            # Whisper + audio processing
