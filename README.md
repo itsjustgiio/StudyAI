@@ -1,12 +1,15 @@
-StudyAI ✏️
-----
-**StudyAI** is an intelligent desktop application designed to revolutionize the way students learn from lectures.  
-Too often, students fall behind due to fast-paced teaching, unclear explanations, or distractions. StudyAI bridges these gaps by transforming raw lectures into **personalized, accessible, and actionable study material**.
+![StudyAI Screenshot](https://s5.ezgif.com/tmp/ezgif-56344b61ac0445.gif)
+
+------
+**StudyAI ✏️**
+
+StudyAI is an intelligent desktop application designed to revolutionize the way students learn from lectures.  
+Too often, students fall behind due to fast-paced teaching, unclear explanations, or distractions. StudyAI bridges these gaps by transforming raw lectures into personalized, accessible, and actionable study material.
+
 -----
+## Features
 
-## 🚀 Features
-
-### 📌 Core Capabilities
+### Core Capabilities
 **Capture** → Upload or record lecture audio with real-time transcription (Whisper).  
 **Condense** → Summarize lectures in three modes:
   - *Topics Only* → Quick review of key concepts  
@@ -20,61 +23,93 @@ Too often, students fall behind due to fast-paced teaching, unclear explanations
 -----
 
 ## Project Structure
-
+```plaintext
 LectureAI/
-│── README.md                  # Overview, setup, and usage instructions
-│── requirements.txt           # Python dependencies (Flet, Whisper, Gemini SDK, etc.)
-│── .gitignore                 # Ignore virtualenv, cache, and local files
-│── main.py                    # Entry point for the app (launches UI)
+│── README.md
+│── requirements.txt
+│── .gitignore
+│── main.py
 
 # ── Core Application
 │── app/
-│   │── __init__.py
-│   │── ui.py                  # UI components (Flet layouts, sidebar, editor, etc.)
-│   │── notes.py               # Note-taking editor logic
-│   │── audio.py               # Handles recording & uploading lecture audio
-│   │── transcription.py       # Whisper transcription + live captions
-│   │── summarizer.py          # Summarization modes (topics, Q&A, detailed)
-│   │── agents.py              # Study Buddy & Quiz Master
-│   │── integrations.py        # Google API wrappers (Drive, Docs, etc.)
-│   │── storage.py             # Local save/load for notes & transcripts
-│   │── utils.py               # Shared helpers (formatting, logging, etc.)
-│   │── agents/
-│   │── __init__.py
-│   │── study_buddy.py     # Explains lecture concepts
-│   │── quiz_master.py     # Generates adaptive practice questions
-│   │── base_agent.py      # (optional) Shared logic / utilities for both
+│   ├── ui.py
+│   ├── notes.py
+│   ├── audio.py
+│   ├── transcription.py
+│   ├── summarizer.py
+│   ├── agents.py
+│   ├── integrations.py
+│   ├── storage.py
+│   ├── utils.py
+│   └── agents/
+│       ├── study_buddy.py
+│       ├── quiz_master.py
+│       └── base_agent.py
 
-# ── Assets (optional but nice for hackathon polish)
+# ── Assets
 │── assets/
-│   │── logo.png               # App/mascot branding (beaver 🦫 optional)
-│   │── icons/                 # Button & UI icons
-│   │── styles.css (optional)  # Custom styles if needed
+│   ├── logo.png
+│   ├── icons/
+│   └── styles.css (optional)
 
-# ── Data (local storage only, no DB for hackathon)
+# ── Data
 │── data/
-│   │── notes/                 # Saved notes by class
-│   │── transcripts/           # Lecture transcripts
-│   │── summaries/             # Generated summaries
-│   │── quizzes/               # Saved quiz questions/answers
-│   │── textbooks/             # Uploaded textbooks/chapters for agents
-
+│   ├── notes/
+│   ├── transcripts/
+│   ├── summaries/
+│   ├── quizzes/
+│   └── textbooks/
 
 # ── Google Integrations
 │── integrations/
-│   │── drive_api.py           # Import lecture slides/notes from Google Drive
-│   │── docs_api.py            # Export polished notes/summaries to Google Docs
-│   │── gemini_api.py          # Summarization, Q&A, quiz generation
-│   │── translate_api.py       # (optional) Google Translate for transcripts
-│   │── calendar_api.py        # (optional) Study reminders via Google Calendar
-│   │── vertex_ai.py           # (optional) Advanced ML pipelines / embeddings
+│   ├── drive_api.py
+│   ├── docs_api.py
+│   └── gemini_api.py
+``````
+-----
+## Installation
 
-# ── Testing (optional, if you have time)
-│── tests/
-│   │── test_notes.py
-│   │── test_transcription.py
-│   │── test_summarizer.py
-│   │── test_integrations.py
+Follow these steps to set up **StudyAI** locally:
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/itsjustgiio/StudyAI.git
+cd StudyAI
+
+# 2. (Optional but recommended) Create & activate a virtual environment
+
+# On macOS/Linux:
+python3 -m venv venv
+source venv/bin/activate
+
+# On Windows:
+python -m venv venv
+venv\Scripts\activate
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. Set up environment variables or API keys
+
+# Copy .env.example to .env (if provided)
+cp .env.example .env
+
+# Then add your API keys/credentials, such as:
+# OPENAI_API_KEY=
+# GOOGLE_DRIVE_CLIENT_ID=
+# GOOGLE_DRIVE_CLIENT_SECRET=
+# GEMINI_API_KEY=
+# etc.
+
+# 5. Run the app
+python main.py
+```
+------
+
+
+
+
+
 
 
 
