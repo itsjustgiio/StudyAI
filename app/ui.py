@@ -39,6 +39,37 @@ def build_ui(page: ft.Page):
     page.scroll = ft.ScrollMode.AUTO
     page.padding = 0
     
+    # Class management system
+    current_classes = {"classes": ["General"], "selected": "General"}
+    class_data = {"General": {"notes": "", "transcriptions": [], "ai_history": []}}
+    
+    def save_current_class_data():
+        """Save current content to the selected class"""
+        current_class = current_classes["selected"]
+        if notes_ref.current and hasattr(notes_ref.current, 'value'):
+            class_data[current_class]["notes"] = notes_ref.current.value or ""
+    
+    def load_class_data(class_name):
+        """Load data for the selected class"""
+        if class_name in class_data:
+            # Load notes
+            if notes_ref.current and hasattr(notes_ref.current, 'value'):
+                notes_ref.current.value = class_data[class_name]["notes"]
+                notes_ref.current.update()
+            # Clear transcription and AI history for new class (only if they exist and are on page)
+            try:
+                if trans_live_ref.current and hasattr(trans_live_ref.current, 'controls'):
+                    trans_live_ref.current.controls.clear()
+                    trans_live_ref.current.update()
+            except:
+                pass  # Ignore if not on page yet
+            try:
+                if upload_results_ref.current and hasattr(upload_results_ref.current, 'controls'):
+                    upload_results_ref.current.controls.clear()
+                    upload_results_ref.current.update()
+            except:
+                pass  # Ignore if not on page yet
+    
     # Resize handler to update navigation when window size changes
     def on_window_resize(e):
         # Update navigation container height
@@ -56,6 +87,107 @@ def build_ui(page: ft.Page):
     LIGHT_GRAY = "#F8F6FA"         # Very light gray with purple tint
     TEXT_DARK = "#4A4A4A"          # Dark gray for text
 
+    # Class management UI components
+    class_dropdown_ref = ft.Ref[ft.Dropdown]()
+    add_class_dialog_ref = ft.Ref[ft.AlertDialog]()
+    new_class_name_ref = ft.Ref[ft.TextField]()
+    
+    def on_class_change(e):
+        """Handle class selection change"""
+        save_current_class_data()  # Save current class data
+        current_classes["selected"] = e.control.value
+        load_class_data(e.control.value)  # Load new class data
+        page.snack_bar = ft.SnackBar(ft.Text(f"📚 Switched to class: {e.control.value}"))
+        page.snack_bar.open = True
+        page.update()
+    
+    class_dropdown = ft.Dropdown(
+        ref=class_dropdown_ref,
+        width=150,
+        value="General",
+        options=[ft.dropdown.Option("General")],
+        on_change=on_class_change,
+        text_style=ft.TextStyle(size=14, color=ft.colors.BLACK),
+        bgcolor=WHITE,
+        color=ft.colors.BLACK,  # Text color for selected value
+    )
+    
+    def close_add_class_dialog(e):
+        add_class_dialog_ref.current.open = False
+        new_class_name_ref.current.value = ""
+        page.update()
+    
+    def add_new_class(e):
+        """Add a new class"""
+        class_name = new_class_name_ref.current.value.strip()
+        if class_name and class_name not in current_classes["classes"]:
+            # Add to classes list
+            current_classes["classes"].append(class_name)
+            class_data[class_name] = {"notes": "", "transcriptions": [], "ai_history": []}
+            
+            # Update dropdown options
+            class_dropdown_ref.current.options = [
+                ft.dropdown.Option(cls) for cls in current_classes["classes"]
+            ]
+            
+            # Switch to new class
+            save_current_class_data()
+            current_classes["selected"] = class_name
+            class_dropdown_ref.current.value = class_name
+            load_class_data(class_name)
+            
+            # Close dialog and show success message
+            add_class_dialog_ref.current.open = False
+            new_class_name_ref.current.value = ""
+            page.snack_bar = ft.SnackBar(ft.Text(f"✅ Added new class: {class_name}"))
+            page.snack_bar.open = True
+            page.update()
+        elif class_name in current_classes["classes"]:
+            # Show error but don't close dialog
+            page.snack_bar = ft.SnackBar(ft.Text("⚠️ Class already exists!"))
+            page.snack_bar.open = True
+            page.update()
+        elif not class_name:
+            # Show error for empty name but don't close dialog
+            page.snack_bar = ft.SnackBar(ft.Text("⚠️ Please enter a class name!"))
+            page.snack_bar.open = True
+            page.update()
+    
+    def open_add_class_dialog(e):
+        new_class_name_ref.current.value = ""  # Clear the field when opening
+        add_class_dialog_ref.current.open = True
+        page.update()
+    
+    add_class_dialog = ft.AlertDialog(
+        ref=add_class_dialog_ref,
+        modal=True,
+        title=ft.Text("📚 Add New Class"),
+        content=ft.Container(
+            ft.Column([
+                ft.Text("Enter the name of your new class:"),
+                ft.TextField(
+                    ref=new_class_name_ref,
+                    hint_text="e.g., Computer Science 101",
+                    autofocus=True,
+                    on_submit=add_new_class,
+                ),
+            ], spacing=10),
+            width=300,
+        ),
+        actions=[
+            ft.TextButton("Cancel", on_click=close_add_class_dialog),
+            ft.ElevatedButton("Add Class", on_click=add_new_class, style=ft.ButtonStyle(bgcolor=PASTEL_PURPLE)),
+        ],
+        actions_alignment=ft.MainAxisAlignment.END,
+    )
+    
+    add_class_btn = ft.IconButton(
+        icon=ft.icons.ADD,
+        tooltip="Add New Class",
+        on_click=open_add_class_dialog,
+        icon_color=WHITE,
+    )
+
     # Refs & state
     nav_index = 0  # 0: Notes, 1: Transcribe, 2: AI
     notes_ref: ft.Ref[ft.TextField] = ft.Ref[ft.TextField]()
@@ -66,14 +198,21 @@ def build_ui(page: ft.Page):
     ask_output_ref: ft.Ref[ft.Text] = ft.Ref[ft.Text]()
     quiz_n_ref: ft.Ref[ft.TextField] = ft.Ref[ft.TextField]()
     quiz_list_ref: ft.Ref[ft.ListView] = ft.Ref[ft.ListView]()
+    upload_results_ref: ft.Ref[ft.ListView] = ft.Ref[ft.ListView]()
+    document_status_ref: ft.Ref[ft.Text] = ft.Ref[ft.Text]()
 
 
 
     app_bar = ft.AppBar(
         title=ft.Text("StudyAI", size=24, weight=ft.FontWeight.BOLD),
-        center_title=True,
+        center_title=False,
         bgcolor=PASTEL_PURPLE,
         color=WHITE,
+        actions=[
+            ft.Text("Class:", size=14, color=WHITE),
+            class_dropdown,
+            add_class_btn,
+        ],
     )
 
     # ---------------- Sidebar (NavigationRail)
@@ -152,16 +291,84 @@ def build_ui(page: ft.Page):
         tight=True,  # Don't expand, keep compact
     )
 
+    # Document upload functionality
+    current_document = {"file": None, "content": ""}
+    
+    def handle_document_upload(file):
+        """Handle PDF/DOC file selection and processing"""
+        if file:
+            current_document["file"] = file
+            document_status_ref.current.value = f"📄 Loaded: {file.name}"
+            
+            # TODO: Extract text content from PDF/DOC file
+            # This is a placeholder - your team will implement actual file parsing
+            if file.name.lower().endswith('.pdf'):
+                extracted_text = f"[PDF Content from {file.name}]\n\nThis is placeholder text extracted from the PDF file. Your team will implement actual PDF text extraction using libraries like PyPDF2 or pdfplumber.\n\nSample content that would be extracted from the document..."
+            elif file.name.lower().endswith(('.doc', '.docx')):
+                extracted_text = f"[DOC Content from {file.name}]\n\nThis is placeholder text extracted from the Word document. Your team will implement actual DOC text extraction using libraries like python-docx.\n\nSample content that would be extracted from the document..."
+            else:
+                extracted_text = f"[Document Content from {file.name}]\n\nUnsupported file type. Please upload PDF or DOC files."
+            
+            current_document["content"] = extracted_text
+            
+            # Add extracted content to notes
+            current_notes = notes_ref.current.value or ""
+            if current_notes:
+                notes_ref.current.value = current_notes + "\n\n" + extracted_text
+            else:
+                notes_ref.current.value = extracted_text
+                
+            notes_ref.current.update()
+            document_status_ref.current.update()
+            
+            page.snack_bar = ft.SnackBar(ft.Text(f"✅ Document content added to notes: {file.name}"))
+            page.snack_bar.open = True
+            page.update()
+        else:
+            current_document["file"] = None
+            current_document["content"] = ""
+            document_status_ref.current.value = "No document loaded"
+            document_status_ref.current.update()
+
+    # Document file picker
+    document_picker = ft.FilePicker(
+        on_result=lambda e: handle_document_upload(e.files[0] if e.files else None)
+    )
+
     # Notes view
+    document_status = ft.Text(
+        ref=document_status_ref,
+        value="No document loaded",
+        size=12,
+        color=ft.colors.ON_SURFACE,
+        italic=True,
+    )
+    
     toolbar = ft.Row(
         controls=[
             ft.Text("📝 Notes", size=18, weight=ft.FontWeight.BOLD, color=PASTEL_PURPLE),
             ft.Container(expand=True),  # Spacer
+            ft.Container(document_status, padding=ft.padding.only(right=10)),
+            ft.ElevatedButton(
+                "Upload Document",
+                icon=ft.icons.UPLOAD_FILE,
+                style=ft.ButtonStyle(bgcolor=DARK_PURPLE, color=ft.colors.ON_PRIMARY),
+                on_click=lambda _: document_picker.pick_files(
+                    allowed_extensions=["pdf", "doc", "docx"]
+                ),
+            ),
             ft.ElevatedButton(
                 "Clear",
                 icon=ft.icons.CLEAR,
                 style=ft.ButtonStyle(bgcolor=PASTEL_PURPLE, color=ft.colors.ON_PRIMARY),
-                on_click=lambda _: (setattr(notes_ref.current, "value", ""), page.update()),
+                on_click=lambda _: (
+                    setattr(notes_ref.current, "value", ""),
+                    setattr(current_document, "file", None),
+                    setattr(current_document, "content", ""),
+                    setattr(document_status_ref.current, "value", "No document loaded"),
+                    document_status_ref.current.update(),
+                    page.update()
+                ),
             ),
             ft.IconButton(
                 ft.icons.CONTENT_COPY,
@@ -176,8 +383,8 @@ def build_ui(page: ft.Page):
     notes_editor = ft.TextField(
         ref=notes_ref,
         multiline=True,
-        min_lines=35,  # Large fixed size to cover majority of screen
-        max_lines=35,  # Fixed height - no expansion
+        min_lines=28,  # Adjusted for toolbar space while maintaining large size
+        max_lines=28,  # Fixed height - no expansion
         expand=True,
         hint_text="Type your lecture notes here...\n\nTips:\n• Use bullet points for key concepts\n• Organize thoughts clearly\n• The AI will analyze this content",
         hint_style=ft.TextStyle(color=ft.colors.OUTLINE),
@@ -188,9 +395,12 @@ def build_ui(page: ft.Page):
 
     notes_view = ft.Container(
         ft.Column([
-            ft.Container(toolbar, padding=ft.padding.only(bottom=25)),  # Standardized spacing
+            ft.Container(toolbar, padding=ft.padding.only(bottom=20)),  # Reduced spacing for better proportions
             ft.Container(
-                notes_editor, 
+                ft.Column([
+                    document_status_ref.current,  # Document status display
+                    notes_editor, 
+                ], spacing=5),
                 expand=True,
                 border=ft.border.all(2, PASTEL_PURPLE),
                 border_radius=12,
@@ -411,7 +621,6 @@ def build_ui(page: ft.Page):
         ft.Container(upload_status, padding=ft.padding.only(top=8)),
     ], spacing=8)
     
-    upload_results_ref = ft.Ref[ft.ListView]()
     upload_results = ft.ListView(
         ref=upload_results_ref,
         expand=True,
@@ -476,16 +685,36 @@ def build_ui(page: ft.Page):
 
     async def do_summarize(_):
         text = notes_ref.current.value or ""
-        if not text.strip():
-            page.snack_bar = ft.SnackBar(ft.Text("📝 Please add some notes first!"))
+        document_content = current_document.get("content", "")
+        
+        # Combine notes and document content
+        combined_text = ""
+        if text.strip():
+            combined_text += text.strip()
+        if document_content.strip():
+            if combined_text:
+                combined_text += "\n\n" + document_content.strip()
+            else:
+                combined_text = document_content.strip()
+        
+        if not combined_text.strip():
+            page.snack_bar = ft.SnackBar(ft.Text("📝 Please add some notes or upload a document first!"))
             page.snack_bar.open = True
             page.update()
             return
+            
         mode = sum_mode_ref.current.value
         sum_btn.disabled = True
         sum_btn.text = "Generating..."
         page.update()
-        result = await stub_summarize(text, mode)
+        
+        # Enhanced prompt to indicate source
+        source_info = ""
+        if current_document.get("file"):
+            source_info = f" (including content from {current_document['file'].name})"
+        
+        result = await stub_summarize(combined_text, mode)
+        result += source_info
         sum_output_ref.current.value = result
         sum_btn.disabled = False
         sum_btn.text = "Generate Summary"
@@ -553,10 +782,33 @@ def build_ui(page: ft.Page):
             page.snack_bar.open = True
             page.update()
             return
+            
         ask_btn.disabled = True
         ask_btn.text = "Thinking..."
         page.update()
-        ans = await stub_answer(q)
+        
+        # Enhanced question with context from notes and documents
+        context = ""
+        notes_text = notes_ref.current.value or ""
+        document_content = current_document.get("content", "")
+        
+        if notes_text.strip() or document_content.strip():
+            context += "\nContext from notes and documents:\n"
+            if notes_text.strip():
+                context += f"Notes: {notes_text.strip()}\n"
+            if document_content.strip():
+                doc_name = current_document.get("file", {}).get("name", "uploaded document")
+                context += f"Document ({doc_name}): {document_content.strip()}\n"
+        
+        enhanced_question = q + context
+        ans = await stub_answer(enhanced_question)
+        
+        # Add source information to response
+        if current_document.get("file"):
+            ans += f"\n\n(Answer generated using context from your notes and {current_document['file'].name})"
+        elif notes_text.strip():
+            ans += f"\n\n(Answer generated using context from your notes)"
+        
         ask_output_ref.current.value = ans
         ask_btn.disabled = False
         ask_btn.text = "Ask AI"
@@ -615,8 +867,20 @@ def build_ui(page: ft.Page):
 
     async def do_quiz(_):
         notes_text = notes_ref.current.value or ""
-        if not notes_text.strip():
-            page.snack_bar = ft.SnackBar(ft.Text("📝 Please add some notes first!"))
+        document_content = current_document.get("content", "")
+        
+        # Combine notes and document content
+        combined_text = ""
+        if notes_text.strip():
+            combined_text += notes_text.strip()
+        if document_content.strip():
+            if combined_text:
+                combined_text += "\n\n" + document_content.strip()
+            else:
+                combined_text = document_content.strip()
+        
+        if not combined_text.strip():
+            page.snack_bar = ft.SnackBar(ft.Text("📝 Please add some notes or upload a document first!"))
             page.snack_bar.open = True
             page.update()
             return
@@ -628,7 +892,7 @@ def build_ui(page: ft.Page):
         quiz_btn.disabled = True
         quiz_btn.text = "Generating..."
         page.update()
-        qa = await stub_make_quiz(notes_text, n)
+        qa = await stub_make_quiz(combined_text, n)
         quiz_list_ref.current.controls.clear()
         for i, (q, a) in enumerate(qa, 1):
             quiz_list_ref.current.controls.append(
@@ -739,8 +1003,9 @@ def build_ui(page: ft.Page):
         ),
     ], expand=True, spacing=0, alignment=ft.MainAxisAlignment.START)
 
-    # Add file picker to page overlay
-    page.overlay.append(file_picker)
+    # Add overlays and components to page
+    page.appbar = app_bar
+    page.overlay.extend([file_picker, add_class_dialog, document_picker])
     page.add(layout)
 
 
