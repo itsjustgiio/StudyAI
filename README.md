@@ -1,7 +1,7 @@
 StudyAI ✏️
 ----
-**StudyAI** is an intelligent desktop application designed to revolutionize the way students learn from lectures.  
-Too often, students fall behind due to fast-paced teaching, unclear explanations, or distractions. StudyAI bridges these gaps by transforming raw lectures into **personalized, accessible, and actionable study material.
+StudyAI is an intelligent desktop application designed to revolutionize the way students learn from lectures.  
+Too often, students fall behind due to fast-paced teaching, unclear explanations, or distractions. StudyAI bridges these gaps by transforming raw lectures into personalized, accessible, and actionable study material.
 -----
 
 ## Features
@@ -72,6 +72,7 @@ Follow these steps to set up **StudyAI** locally:
 # 1. Clone the repository
 git clone https://github.com/itsjustgiio/StudyAI.git
 cd StudyAI
+
 
 
 
