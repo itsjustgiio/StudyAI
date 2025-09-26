@@ -1,3 +1,5 @@
+![StudyAI Screenshot](https://s5.ezgif.com/tmp/ezgif-56344b61ac0445.gif)
+
 ------
 **StudyAI ✏️**
 
@@ -103,6 +105,7 @@ cp .env.example .env
 python main.py
 ```
 ------
+
 
 
 
