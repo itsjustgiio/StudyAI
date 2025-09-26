@@ -1,2 +1,6 @@
-.venv/
 client_secret.json
+# Python virtual environments (keep venvs out of git)
+.venv/
+venv/
+env/
+
