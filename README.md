@@ -12,8 +12,10 @@ Too often, students fall behind due to fast-paced teaching, unclear explanations
   - *Topics Only* → Quick review of key concepts  
   - *Questions Asked* → Extracted Q&A from the lecture  
   - *Detailed Summary* → Narrative-style overview for deep study
+    
 **Comprehend** → Learn actively through two AI agents:
   - *Study Buddy* → Explains difficult concepts in plain language  
   - *Quiz Master* → Generates personalized practice questions  
+
 
 
