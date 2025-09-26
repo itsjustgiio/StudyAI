@@ -1,4 +1,5 @@
-#StudyAI 
+##StudyAI 
+----
 **StudyAI** is an intelligent desktop application designed to revolutionize the way students learn from lectures.  
 Too often, students fall behind due to fast-paced teaching, unclear explanations, or distractions. StudyAI bridges these gaps by transforming raw lectures into **personalized, accessible, and actionable study material**.
 -----
@@ -14,3 +15,4 @@ Too often, students fall behind due to fast-paced teaching, unclear explanations
 **Comprehend** → Learn actively through two AI agents:
   - *Study Buddy* → Explains difficult concepts in plain language  
   - *Quiz Master* → Generates personalized practice questions  
+
