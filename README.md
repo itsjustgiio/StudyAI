@@ -20,63 +20,48 @@ Too often, students fall behind due to fast-paced teaching, unclear explanations
 -----
 
 ## Project Structure
-
+```plaintext
 LectureAI/
-│── README.md                  # Overview, setup, and usage instructions
-│── requirements.txt           # Python dependencies (Flet, Whisper, Gemini SDK, etc.)
-│── .gitignore                 # Ignore virtualenv, cache, and local files
-│── main.py                    # Entry point for the app (launches UI)
+│── README.md
+│── requirements.txt
+│── .gitignore
+│── main.py
 
 # ── Core Application
 │── app/
-│   │── __init__.py
-│   │── ui.py                  # UI components (Flet layouts, sidebar, editor, etc.)
-│   │── notes.py               # Note-taking editor logic
-│   │── audio.py               # Handles recording & uploading lecture audio
-│   │── transcription.py       # Whisper transcription + live captions
-│   │── summarizer.py          # Summarization modes (topics, Q&A, detailed)
-│   │── agents.py              # Study Buddy & Quiz Master
-│   │── integrations.py        # Google API wrappers (Drive, Docs, etc.)
-│   │── storage.py             # Local save/load for notes & transcripts
-│   │── utils.py               # Shared helpers (formatting, logging, etc.)
-│   │── agents/
-│   │── __init__.py
-│   │── study_buddy.py     # Explains lecture concepts
-│   │── quiz_master.py     # Generates adaptive practice questions
-│   │── base_agent.py      # (optional) Shared logic / utilities for both
+│   ├── ui.py
+│   ├── notes.py
+│   ├── audio.py
+│   ├── transcription.py
+│   ├── summarizer.py
+│   ├── agents.py
+│   ├── integrations.py
+│   ├── storage.py
+│   ├── utils.py
+│   └── agents/
+│       ├── study_buddy.py
+│       ├── quiz_master.py
+│       └── base_agent.py
 
-# ── Assets (optional but nice for hackathon polish)
+# ── Assets
 │── assets/
-│   │── logo.png               # App/mascot branding (beaver 🦫 optional)
-│   │── icons/                 # Button & UI icons
-│   │── styles.css (optional)  # Custom styles if needed
+│   ├── logo.png
+│   ├── icons/
+│   └── styles.css (optional)
 
-# ── Data (local storage only, no DB for hackathon)
+# ── Data
 │── data/
-│   │── notes/                 # Saved notes by class
-│   │── transcripts/           # Lecture transcripts
-│   │── summaries/             # Generated summaries
-│   │── quizzes/               # Saved quiz questions/answers
-│   │── textbooks/             # Uploaded textbooks/chapters for agents
-
+│   ├── notes/
+│   ├── transcripts/
+│   ├── summaries/
+│   ├── quizzes/
+│   └── textbooks/
 
 # ── Google Integrations
 │── integrations/
-│   │── drive_api.py           # Import lecture slides/notes from Google Drive
-│   │── docs_api.py            # Export polished notes/summaries to Google Docs
-│   │── gemini_api.py          # Summarization, Q&A, quiz generation
-│   │── translate_api.py       # (optional) Google Translate for transcripts
-│   │── calendar_api.py        # (optional) Study reminders via Google Calendar
-│   │── vertex_ai.py           # (optional) Advanced ML pipelines / embeddings
-
-# ── Testing (optional, if you have time)
-│── tests/
-│   │── test_notes.py
-│   │── test_transcription.py
-│   │── test_summarizer.py
-│   │── test_integrations.py
-
-
+│   ├── drive_api.py
+│   ├── docs_api.py
+│   └── gemini_api.py
 
 
 
