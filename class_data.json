@@ -1,0 +1,33 @@
+{
+  "current_classes": {
+    "classes": [
+      "General",
+      "Test Class",
+      "Computer Science 101",
+      "Math 201"
+    ],
+    "selected": "Math 201"
+  },
+  "class_data": {
+    "General": {
+      "notes": "",
+      "transcriptions": [],
+      "ai_history": []
+    },
+    "Test Class": {
+      "notes": "",
+      "transcriptions": [],
+      "ai_history": []
+    },
+    "Computer Science 101": {
+      "notes": "",
+      "transcriptions": [],
+      "ai_history": []
+    },
+    "Math 201": {
+      "notes": "These are my math notes for today's lecture",
+      "transcriptions": [],
+      "ai_history": []
+    }
+  }
+}

@@ -57,7 +57,11 @@ async def stub_stop_transcription():
 # Your main.py should do:  ft.app(build_ui)
 # ----------------------------
 
-def build_ui(page: ft.Page):
+def build_ui(page: ft.Page, callbacks=None):
+    """Build UI with optional button callbacks from ButtonManager"""
+    if callbacks is None:
+        callbacks = {}  # Fallback to empty dict if no callbacks provided
+    
     page.title = "StudyAI"
     page.theme_mode = ft.ThemeMode.LIGHT
     page.window_width = 1200
@@ -207,6 +211,14 @@ def build_ui(page: ft.Page):
 
 
 
+    # Google Drive button for top navigation
+    google_drive_btn = ft.ElevatedButton(
+        "Google Drive",
+        icon=ft.icons.CLOUD,
+        style=ft.ButtonStyle(bgcolor="#4285F4", color=ft.colors.WHITE),  # Google blue color
+        on_click=callbacks.get('connect_drive', lambda e: None),
+    )
+
     app_bar = ft.AppBar(
         title=ft.Text("StudyAI", size=24, weight=ft.FontWeight.BOLD),
         center_title=False,
@@ -216,6 +228,8 @@ def build_ui(page: ft.Page):
             ft.Text("Class:", size=14, color=WHITE),
             class_dropdown,
             add_class_btn,
+            ft.Container(width=10),  # Small spacer
+            google_drive_btn,
         ],
     )
 
@@ -327,7 +341,7 @@ def build_ui(page: ft.Page):
                 "Upload Document",
                 icon=ft.icons.UPLOAD_FILE,
                 style=ft.ButtonStyle(bgcolor=DARK_PURPLE, color=ft.colors.ON_PRIMARY),
-                on_click=lambda e: None,  # TODO: was `lambda _: document_picker.pick_files(allowed_extensions=["pdf", "doc", "docx"])` → wire in main.py to call app/pdf_manager.py (import/export/list PDFs)
+                on_click=callbacks.get('upload_document', lambda e: None),
             ),
             ft.ElevatedButton(
                 "Clear",
@@ -339,7 +353,7 @@ def build_ui(page: ft.Page):
                 ft.icons.CONTENT_COPY,
                 tooltip="Copy notes",
                 icon_color=PASTEL_PURPLE,
-                on_click=lambda e: None,  # TODO: was `lambda _: page.set_clipboard(notes_ref.current.value or "")` → wire in main.py to call app/storage.py (local save/load)
+                on_click=callbacks.get('copy_notes', lambda e: None),
             ),
         ],
         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
@@ -439,7 +453,7 @@ def build_ui(page: ft.Page):
     start_btn = ft.ElevatedButton(
         "Start Recording", 
         icon=ft.icons.MIC, 
-        on_click=lambda e: None,  # TODO: was `start_trans` → wire in main.py to call app/transcription.py (start/stop streaming, captions)
+        on_click=callbacks.get('start_recording', lambda e: None),
         style=ft.ButtonStyle(
             bgcolor=PASTEL_PURPLE,
             color=ft.colors.ON_PRIMARY,
@@ -674,7 +688,7 @@ def build_ui(page: ft.Page):
         # TODO: Wire in main.py to call app/summarizer.py (summaries, Q&A)
         pass
 
-    sum_btn.on_click = lambda e: None  # TODO: was `do_summarize` → wire in main.py to call app/summarizer.py (summaries, Q&A)
+    sum_btn.on_click = callbacks.get('summarize_content', lambda e: None)
 
     summarizer_tab = ft.Column([
         # Controls section  
