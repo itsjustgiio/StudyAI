@@ -17,5 +17,15 @@ Too often, students fall behind due to fast-paced teaching, unclear explanations
   - *Study Buddy* → Explains difficult concepts in plain language  
   - *Quiz Master* → Generates personalized practice questions  
 
+-----------
+## 🎯 Hackathon MVP
+
+Our MVP delivers a functional demo with:  
+1. **Note-Taking Editor** → Rich-text editor with folders for classes  
+2. **Audio + Transcription** → Live captions + transcript storage  
+3. **Summarization** → 3 AI-powered modes (topics, Q&A, detailed)  
+4. **AI Agents** → Study Buddy + Quiz Master  
+5. **Google Integrations** → Drive import + Docs export  
+
 
 
