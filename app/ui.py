@@ -143,7 +143,7 @@ def build_ui(page: ft.Page):
         tight=True,  # Don't expand to fill all available space
     )
 
-    # ---------------- Notes view
+    # Notes view
     toolbar = ft.Row(
         controls=[
             ft.Text("📝 Notes", size=18, weight=ft.FontWeight.BOLD),
@@ -192,7 +192,7 @@ def build_ui(page: ft.Page):
         bgcolor=ft.colors.SURFACE_VARIANT,
     )
 
-    # ---------------- Transcription view
+    # Transcription view
     trans_running = {"on": False}
 
     async def handle_transcription_line(line: str):
@@ -363,7 +363,7 @@ def build_ui(page: ft.Page):
         ),
     ], expand=True, spacing=0)
 
-    # --- Study Buddy tab
+    # Study Buddy tab
     ask_in = ft.TextField(
         ref=ask_input_ref, 
         expand=True, 
@@ -429,7 +429,7 @@ def build_ui(page: ft.Page):
         ),
     ], expand=True, spacing=0)
 
-    # --- Quiz Master tab
+    # Quiz Master tab
     quiz_n = ft.TextField(
         ref=quiz_n_ref, 
         width=120, 
@@ -530,7 +530,7 @@ def build_ui(page: ft.Page):
             ft.Tab(text="🎯 Quiz Master", content=quiz_tab),
         ],
         selected_index=0,
-        height=400,  # Set a fixed height instead of expand
+        height=400,  
     )
 
     ai_view = ft.Container(
@@ -548,8 +548,6 @@ def build_ui(page: ft.Page):
         bgcolor=ft.colors.SURFACE_VARIANT,
     )
 
-    # ---------------- Root layout: Sidebar + Content
-    # Initial view setup
     main_content.content = ft.Container(notes_view, expand=True, padding=ft.padding.all(20))
 
     layout = ft.Row([
@@ -559,13 +557,13 @@ def build_ui(page: ft.Page):
             height=page.window_height - 100 if page.window_height else 700,  # Fixed height
             bgcolor=ft.colors.SURFACE_VARIANT, 
             padding=ft.padding.all(12),
-            alignment=ft.alignment.top_left,  # Fixed alignment
+            alignment=ft.alignment.top_left,  
         ),
         ft.VerticalDivider(width=1, color=ft.colors.OUTLINE),
         ft.Container(
             main_content,
             expand=True,
-            alignment=ft.alignment.top_left,  # Ensure content starts at top
+            alignment=ft.alignment.top_left,  
         ),
     ], expand=True, spacing=0, alignment=ft.MainAxisAlignment.START)
 
