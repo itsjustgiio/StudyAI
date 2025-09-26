@@ -2,8 +2,8 @@
 flet==0.25.0             # Cross-platform UI framework
 
 # Audio & Speech
-git+https://github.com/openai/whisper.git   # Whisper transcription (install from GitHub)
 pyaudio==0.2.14          # Microphone input (optional for live transcription)
+openai-whisper==20231117   # Whisper transcription (install from GitHub)
 soundfile==0.12.1        # Audio file handling
 numpy==1.26.4            # Whisper + audio processing
 
@@ -12,7 +12,7 @@ google-generativeai==0.8.3   # Gemini SDK (AI Studio)
 # vertexai==1.66.0           # Uncomment if using Google Cloud Vertex AI
 
 # Google Integrations
-google-api-python-client==2.149.0
+google-api-python-client==2.183.0
 google-auth==2.35.0
 google-auth-oauthlib==1.2.1
 google-auth-httplib2==0.2.0
