@@ -1,74 +1,45 @@
-# Python cache
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-*.pytest_cache
-
-# Virtual environments
-.venv/
-env/
-venv/
-*.env
-
-# Build / packaging
-build/
-dist/
-*.egg-info/
-
-# Jupyter / IPython
-.ipynb_checkpoints/
-
-# VS Code / IDE configs
-.vscode/
-.idea/
-
-# OS junk files
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
-
-# Audio/Transcription test data
-data/transcripts/samples/
-*.wav
-*.mp3
-
-# Whisper transcription outputs
-data/transcripts/outputs/
-
-# Local secrets
-.env.local
-.env.*.local
-client_secret.json
-
-# Ignore everything in data/classes subfolders
-data/classes/*
-
-# But keep the classes directory itself
-!data/classes/
-
-
-
 # --- Python build/cache ---
 __pycache__/
 *.py[cod]
 .pytest_cache/
 
-# --- Virtual envs ---
+# --- Virtual environments ---
 .venv/
 venv/
+env/
 
-# --- OS cruft ---
+# --- Build / packaging ---
+build/
+dist/
+*.egg-info/
+
+# --- IDE / editors ---
+.vscode/
+.idea/
+
+# --- OS junk ---
 .DS_Store
+Thumbs.db
 
-# --- Local secrets ---
+# --- Logs ---
+*.log
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- Local env / secrets ---
 .env
+.env.local
 .env.*.local
 client_secret.json
+token.json
 
-# --- Generated data/exports ---
+# --- Audio / transcription test data (comment out if you need to track audio) ---
+data/transcripts/samples/
+*.wav
+*.mp3
+
+# --- Generated outputs ---
 data/transcripts/outputs/
 exports/
 
@@ -76,6 +47,3 @@ exports/
 data/classes/**
 !data/classes/
 !data/classes/.gitkeep
-
-__pycache__/
-*.pyc
