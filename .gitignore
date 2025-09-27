@@ -48,3 +48,32 @@ data/classes/*
 
 # But keep the classes directory itself
 !data/classes/
+
+
+
+# --- Python build/cache ---
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# --- Virtual envs ---
+.venv/
+venv/
+
+# --- OS cruft ---
+.DS_Store
+
+# --- Local secrets ---
+.env
+.env.*.local
+client_secret.json
+
+# --- Generated data/exports ---
+data/transcripts/outputs/
+exports/
+
+# --- Class folders: keep the root, ignore subfolders ---
+data/classes/**
+!data/classes/
+!data/classes/.gitkeep
+
