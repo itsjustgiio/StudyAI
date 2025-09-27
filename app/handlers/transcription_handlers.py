@@ -83,15 +83,62 @@ class TranscriptionHandler:
             self.is_recording = False
             self._show_message("⏹️ Stop recording (stub) - not yet implemented")
         else:
-            self._show_message("⚠️ Not currently recording", success=False)
-
-    def transcribe_audio(self, e: ft.ControlEvent = None):
-        self._show_message("📝 Transcribe button clicked (stub) - not yet implemented")
-
-    # ------------------------
-    # Utility
-    # ------------------------
-
+            self._show_message("⚠️ Not currently recording!", success=False)
+    
+    # NOTE: Manual transcribe_audio method removed. Auto-transcription will be
+    # triggered automatically after upload or recording stop by future logic.
+    
+    def upload_audio(self, e: Any = None):
+        """
+        Handle uploading audio file for transcription
+        
+        TODO: Implement the following:
+        1. Show file picker for audio files
+        2. Validate audio format and size
+        3. Load audio file
+        4. Display audio player controls
+        5. Prepare for transcription
+        """
+        # Placeholder implementation
+        self._show_message("📂 Upload Audio - Ready for implementation!")
+        
+        # Example implementation:
+        # audio_formats = ['.wav', '.mp3', '.m4a', '.flac']
+        # file_path = self._show_file_picker(audio_formats)
+        # if file_path:
+        #     if self._validate_audio_file(file_path):
+        #         self._load_audio_file(file_path)
+        #         self._show_audio_player(file_path)
+        #         self._show_message(f"✅ Audio loaded: {file_path}")
+        #     else:
+        #         self._show_message("❌ Invalid audio file", success=False)
+    
+    def play_audio(self, e: Any = None):
+        """
+        Handle playing audio file
+        
+        TODO: Implement the following:
+        1. Check if audio file is loaded
+        2. Initialize audio playback
+        3. Start playing audio
+        4. Update playback UI controls
+        5. Handle playback errors
+        """
+        # Placeholder implementation
+        self._show_message("▶️ Play Audio - Ready for implementation!")
+    
+    def pause_audio(self, e: Any = None):
+        """
+        Handle pausing audio playback
+        
+        TODO: Implement the following:
+        1. Pause current audio playback
+        2. Update UI controls
+        3. Save playback position
+        """
+        # Placeholder implementation
+        self._show_message("⏸️ Pause Audio - Ready for implementation!")
+    
     def _show_message(self, message: str, success: bool = True):
         color = ft.colors.GREEN if success else ft.colors.RED
         self.page.show_snack_bar(ft.SnackBar(content=ft.Text(message), bgcolor=color))

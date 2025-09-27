@@ -57,12 +57,13 @@ class ButtonManager:
             'start_recording': self.transcription_handler.start_recording,
             'stop_recording': self.transcription_handler.stop_recording,
             'upload_audio': self.transcription_handler.upload_audio,
-            'transcribe_audio': self.transcription_handler.transcribe_audio,
+            # 'transcribe_audio' removed: auto-transcription will trigger after upload/recording
             
             # AI Features
             'summarize_content': self.ai_handler.summarize_content,
             'ask_ai': self.ai_handler.ask_ai,
             'generate_quiz': self.ai_handler.generate_quiz,
+            'model_change': self.ai_handler.on_model_change,
             
             # Google Drive
             'connect_drive': self.google_drive_handler.connect_drive,
