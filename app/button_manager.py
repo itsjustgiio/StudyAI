@@ -26,7 +26,8 @@ class ButtonManager:
         self.class_handler = class_handlers.ClassHandler(page)
         self.notes_handler = notes_handlers.NotesHandler(page)
         self.document_handler = document_handlers.DocumentHandler(page)
-        self.transcription_handler = transcription_handlers.TranscriptionHandler(page)
+        # Inject the shared class_handler into TranscriptionHandler so all modules share the same state
+        self.transcription_handler = transcription_handlers.TranscriptionHandler(page, self.class_handler)
         self.ai_handler = ai_handlers.AIHandler(page)
         self.google_drive_handler = google_drive_handlers.GoogleDriveHandler(page)
     
@@ -36,6 +37,9 @@ class ButtonManager:
             # Class Management
             'add_class': self.class_handler.add_new_class,
             'switch_class': self.class_handler.switch_class,
+            # Class State Helpers
+            'get_current_class': self.class_handler.get_current_class,
+            'list_classes': lambda: self.class_handler.classes,
             'delete_class': self.class_handler.delete_class,
             
             # Notes Management

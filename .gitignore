@@ -42,3 +42,9 @@ data/transcripts/outputs/
 .env.local
 .env.*.local
 client_secret.json
+
+# Ignore everything in data/classes subfolders
+data/classes/*
+
+# But keep the classes directory itself
+!data/classes/
