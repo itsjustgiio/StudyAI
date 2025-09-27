@@ -58,7 +58,7 @@ async def stub_stop_transcription():
 # Your main.py should do:  ft.app(build_ui)
 # ----------------------------
 
-def build_ui(page: ft.Page, callbacks=None):
+def build_ui(page: ft.Page, callbacks: dict | None = None):
     """Build UI with optional button callbacks from ButtonManager"""
     if callbacks is None:
         callbacks = {}  # Fallback to empty dict if no callbacks provided
@@ -498,7 +498,7 @@ def build_ui(page: ft.Page, callbacks=None):
 
     # Audio upload section
     file_picker = ft.FilePicker(
-    on_result=lambda e: callbacks.get("upload_audio", lambda ev: None)(e)
+        on_result=lambda e: callbacks.get("upload_audio", lambda ev: None)(e)
     )
     
     # Model size dropdown
@@ -532,12 +532,12 @@ def build_ui(page: ft.Page, callbacks=None):
     )
     
     upload_btn = ft.ElevatedButton(
-    "Upload Audio File",
-    icon=ft.icons.UPLOAD_FILE,
-    on_click=lambda e: file_picker.pick_files(
-        allowed_extensions=["mp3", "wav", "m4a", "flac", "ogg", "mp4", "mov", "mkv"]
-    ),
-    style=ft.ButtonStyle(bgcolor=PASTEL_PURPLE, color=ft.colors.ON_PRIMARY),
+        "Upload Audio File",
+        icon=ft.icons.UPLOAD_FILE,
+        on_click=lambda e: file_picker.pick_files(
+            allowed_extensions=["mp3", "wav", "m4a", "flac", "ogg", "mp4", "mov", "mkv"]
+        ),
+        style=ft.ButtonStyle(bgcolor=PASTEL_PURPLE, color=ft.colors.ON_PRIMARY),
     )
     
     transcribe_btn = ft.ElevatedButton(
@@ -970,4 +970,3 @@ def build_ui(page: ft.Page, callbacks=None):
 
 
 # End of file
-
