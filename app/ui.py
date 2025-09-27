@@ -21,7 +21,6 @@ import asyncio
 import flet as ft
 
 from .landing_page import create_landing_page
-from .class_handlers import ClassHandler  # keep only if you actually use it
 
 
 # ============================================================================
@@ -103,14 +102,13 @@ def build_ui(page: ft.Page, callbacks=None):
     
     def save_current_class_data():
         """Save current content to the selected class - UI ONLY"""
-        _class_handler.save_current_class_data()
+        # TODO: Wire in main.py to call appropriate class manager
+        pass
     
     def load_class_data(class_name):
-    # Select class in dropdown, then let handler load notes
-        dd = class_dropdown_ref.current
-        if dd is not None and class_name:
-            dd.value = class_name
-        _class_handler.on_class_change(None)
+        """Load data for the selected class - UI ONLY"""
+        # TODO: Wire in main.py to call appropriate class manager
+        pass
     
     # Remove dynamic resize handler to prevent navigation movement
     # Navigation will now stay fixed in position regardless of content changes
@@ -128,17 +126,10 @@ def build_ui(page: ft.Page, callbacks=None):
     add_class_dialog_ref = ft.Ref[ft.AlertDialog]()
     new_class_name_ref = ft.Ref[ft.TextField]()
     
-
-    # Instantiate class handler (notes_ref will be attached later)
-    _class_handler = ClassHandler(
-        page,
-        class_dropdown_ref=class_dropdown_ref,
-        add_class_dialog_ref=add_class_dialog_ref,
-        new_class_name_ref=new_class_name_ref,
-        notes_ref=None,
-    )
     def on_class_change(e):
-        _class_handler.on_class_change(e)
+        """Handle class selection change - UI ONLY"""
+        # TODO: Wire in main.py to call appropriate class manager
+        pass
     class_dropdown = ft.Dropdown(
         ref=class_dropdown_ref,
         width=150,
@@ -151,11 +142,48 @@ def build_ui(page: ft.Page, callbacks=None):
     )
     
     def close_add_class_dialog(e):
-        _class_handler.close_add_class_dialog(e)
+        add_class_dialog_ref.current.open = False
+        new_class_name_ref.current.value = ""
+        page.update()
     def add_new_class(e):
-        _class_handler.add_new_class(e)
+        """Add a new class"""
+        class_name = new_class_name_ref.current.value.strip()
+        if class_name and class_name not in current_classes["classes"]:
+            # Add to classes list
+            current_classes["classes"].append(class_name)
+            class_data[class_name] = {"notes": "", "transcriptions": [], "ai_history": []}
+            
+            # Update dropdown options
+            class_dropdown_ref.current.options = [
+                ft.dropdown.Option(cls) for cls in current_classes["classes"]
+            ]
+            
+            # Switch to new class
+            save_current_class_data()
+            current_classes["selected"] = class_name
+            class_dropdown_ref.current.value = class_name
+            load_class_data(class_name)
+            
+            # Close dialog and show success message
+            add_class_dialog_ref.current.open = False
+            new_class_name_ref.current.value = ""
+            page.snack_bar = ft.SnackBar(ft.Text(f"✅ Added new class: {class_name}"))
+            page.snack_bar.open = True
+            page.update()
+        elif class_name in current_classes["classes"]:
+            # Show error but don't close dialog
+            page.snack_bar = ft.SnackBar(ft.Text("⚠️ Class already exists!"))
+            page.snack_bar.open = True
+            page.update()
+        elif not class_name:
+            # Show error for empty name but don't close dialog
+            page.snack_bar = ft.SnackBar(ft.Text("⚠️ Please enter a class name!"))
+            page.snack_bar.open = True
+            page.update()
     def open_add_class_dialog(e):
-        _class_handler.open_add_class_dialog(e)
+        new_class_name_ref.current.value = ""  # Clear the field when opening
+        add_class_dialog_ref.current.open = True
+        page.update()
     add_class_dialog = ft.AlertDialog(
         ref=add_class_dialog_ref,
         modal=True,
@@ -176,8 +204,8 @@ def build_ui(page: ft.Page, callbacks=None):
             padding=ft.padding.all(10),
         ),
         actions=[
-            ft.TextButton("Cancel", on_click=close_add_class_dialog),  # TODO: was `close_add_class_dialog` → wire in main.py to call appropriate manager via main.py
-            ft.ElevatedButton("Add Class", on_click=add_new_class, style=ft.ButtonStyle(bgcolor=PASTEL_PURPLE)),  # TODO: was `add_new_class` → wire in main.py to call appropriate manager via main.py
+            ft.TextButton("Cancel", on_click=lambda e: None),  # TODO: was `close_add_class_dialog` → wire in main.py to call appropriate manager via main.py  # TODO: was `close_add_class_dialog` → wire in main.py to call appropriate manager via main.py
+            ft.ElevatedButton("Add Class", on_click=lambda e: None, style=ft.ButtonStyle(bgcolor=PASTEL_PURPLE)),  # TODO: was `add_new_class` → wire in main.py to call appropriate manager via main.py  # TODO: was `add_new_class` → wire in main.py to call appropriate manager via main.py
         ],
         actions_alignment=ft.MainAxisAlignment.END,
     )
@@ -193,7 +221,7 @@ def build_ui(page: ft.Page, callbacks=None):
     nav_index = 0  # 0: Notes, 1: Transcribe, 2: AI
     notes_ref: ft.Ref[ft.TextField] = ft.Ref[ft.TextField]()
     # Attach notes_ref to handler
-    _class_handler.notes_ref = notes_ref
+        # Notes reference handled by ButtonManager in main.py
     trans_live_ref: ft.Ref[ft.ListView] = ft.Ref[ft.ListView]()
     sum_output_ref: ft.Ref[ft.Text] = ft.Ref[ft.Text]()
     sum_mode_ref: ft.Ref[ft.Dropdown] = ft.Ref[ft.Dropdown]()
@@ -228,12 +256,6 @@ def build_ui(page: ft.Page, callbacks=None):
         bgcolor=PASTEL_PURPLE,
         color=WHITE,
         actions=[
-            back_to_landing_btn,
-            ft.VerticalDivider(width=1, color=WHITE),  # Separator
-            ft.Text("Class:", size=14, color=WHITE),
-            class_dropdown,
-            add_class_btn,
-            ft.Container(width=10),  # Small spacer
             google_drive_btn,
         ],
     )
@@ -257,72 +279,109 @@ def build_ui(page: ft.Page, callbacks=None):
             page.update()
         return handler
     
+    # Top navigation bar buttons - horizontal layout
     nav_buttons = [
         ft.ElevatedButton(
             content=ft.Row([
-                ft.Icon(ft.icons.NOTE_ALT),
-                ft.Text("Notes", weight=ft.FontWeight.W_500)
-            ], spacing=8),
+                ft.Icon(ft.icons.NOTE_ALT, size=18),
+                ft.Text("Notes", weight=ft.FontWeight.W_500, size=14)
+            ], spacing=6),
             on_click=nav_button_click(0),
             style=ft.ButtonStyle(
                 bgcolor=PASTEL_PURPLE,
                 color=ft.colors.ON_PRIMARY,
             ),
-            width=160,
+            height=40,
         ),
         ft.ElevatedButton(
             content=ft.Row([
-                ft.Icon(ft.icons.MIC),
-                ft.Text("Transcribe", weight=ft.FontWeight.W_500)
-            ], spacing=8),
+                ft.Icon(ft.icons.MIC, size=18),
+                ft.Text("Transcribe", weight=ft.FontWeight.W_500, size=14)
+            ], spacing=6),
             on_click=nav_button_click(1),
             style=ft.ButtonStyle(
                 bgcolor=ft.colors.SURFACE_VARIANT,
                 color=ft.colors.ON_SURFACE,
             ),
-            width=160,
+            height=40,
         ),
         ft.ElevatedButton(
             content=ft.Row([
-                ft.Icon(ft.icons.SMART_TOY),
-                ft.Text("AI Assistant", weight=ft.FontWeight.W_500)
-            ], spacing=8),
+                ft.Icon(ft.icons.SMART_TOY, size=18),
+                ft.Text("AI Assistant", weight=ft.FontWeight.W_500, size=14)
+            ], spacing=6),
             on_click=nav_button_click(2),
             style=ft.ButtonStyle(
                 bgcolor=ft.colors.SURFACE_VARIANT,
                 color=ft.colors.ON_SURFACE,
             ),
-            width=160,
+            height=40,
         ),
     ]
     
-    # Back to Landing button for sidebar
-    back_to_landing_nav_btn = ft.OutlinedButton(
+    # Mode tabs (moved to content column)
+    mode_tabs = ft.Container(
+        content=ft.Row(
+            nav_buttons,
+            spacing=10,
+            alignment=ft.MainAxisAlignment.START,
+        ),
+        bgcolor=WHITE,
+        padding=ft.padding.only(top=12, bottom=12),  # No left/right padding, inherits from parent
+        border=ft.border.only(bottom=ft.BorderSide(2, PASTEL_PURPLE)),
+        height=64,
+        margin=ft.margin.all(0),  # Ensure no stray margins
+    )
+    
+    # Purple divider between sidebar and content
+    divider = ft.Container(
+        width=2,
+        bgcolor=PASTEL_PURPLE,
+    )
+    
+    # Left sidebar with Home button and Class section
+    back_to_landing_nav_btn = ft.ElevatedButton(
         content=ft.Row([
             ft.Icon(ft.icons.HOME, size=18),
             ft.Text("Home", weight=ft.FontWeight.W_500, size=14)
         ], spacing=6),
         on_click=return_to_landing,
         style=ft.ButtonStyle(
-            bgcolor=ft.colors.TRANSPARENT,
-            color=DARK_PURPLE,
-            side=ft.BorderSide(width=1, color=DARK_PURPLE),
+            bgcolor=PASTEL_PURPLE,
+            color=ft.colors.ON_PRIMARY,
         ),
-        width=160,
-        height=35,
+        width=220,
+        height=40,
     )
     
-    nav = ft.Column(
-        nav_buttons + [
-            ft.Container(height=20),  # Spacer
-            ft.Divider(color=PASTEL_PURPLE, height=1),
-            ft.Container(height=10),  # Small spacer
+    # Sidebar column content
+    sidebar_column = ft.Column([
+        ft.Container(
             back_to_landing_nav_btn,
-        ],
-        spacing=10,
-        alignment=ft.MainAxisAlignment.START,  # Start from top, we'll position with container
-        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-        tight=True,  # Don't expand, keep compact
+            padding=ft.padding.only(top=12, bottom=12),
+        ),
+        ft.Divider(color=PASTEL_PURPLE, height=1),
+        ft.Container(
+            content=ft.Column([
+                ft.Text("Class:", size=14, color=TEXT_DARK, weight=ft.FontWeight.W_500),
+                ft.Container(height=8),
+                ft.Row([
+                    class_dropdown,
+                    add_class_btn,
+                ], spacing=8, alignment=ft.MainAxisAlignment.START),
+            ], spacing=0, tight=True),
+            padding=ft.padding.only(top=0, bottom=12),
+        ),
+    ], spacing=0, tight=True)
+    
+    # Sidebar container with specified structure
+    sidebar = ft.Container(
+        width=280,
+        alignment=ft.alignment.top_left,
+        padding=ft.padding.only(left=12, right=12),
+        content=sidebar_column,
+        bgcolor=LIGHT_GRAY,
+        margin=ft.margin.all(0),  # Remove stray margins
     )
 
     # Document upload functionality
@@ -981,11 +1040,11 @@ def build_ui(page: ft.Page, callbacks=None):
         def handler(_):
             current_nav["selected"] = index
             if index == 0:
-                main_content.content = ft.Container(notes_view, expand=True, padding=ft.padding.all(10))
+                main_content.content = notes_view
             elif index == 1:
-                main_content.content = ft.Container(trans_view, expand=True, padding=ft.padding.all(10))
+                main_content.content = trans_view
             else:
-                main_content.content = ft.Container(ai_view, expand=True, padding=ft.padding.all(10))
+                main_content.content = ai_view
             
             # Update button styles
             for i, btn in enumerate(nav_buttons):
@@ -1001,33 +1060,43 @@ def build_ui(page: ft.Page, callbacks=None):
     nav_buttons[1].on_click = create_nav_handler(1)
     nav_buttons[2].on_click = create_nav_handler(2)
 
-    main_content.content = ft.Container(notes_view, expand=True, padding=ft.padding.all(10))
+    main_content.content = notes_view  # Content handled directly, no wrapper needed
 
-    # Create navigation container with truly fixed center-left positioning
-    nav_container = ft.Container(
-        ref=nav_container_ref,
-        content=ft.Column([
-            ft.Container(expand=True),  # Top spacer - pushes nav to center
-            nav,  # Navigation buttons in the center
-            ft.Container(expand=True),  # Bottom spacer - keeps nav centered
-        ]),
-        width=200,
-        height=900,  # Fixed height that matches window height
-        bgcolor=LIGHT_GRAY,
-        padding=ft.padding.all(12),
-    )
-
-    # Main app layout
-    main_app_layout = ft.Row([
-        nav_container,
-        ft.VerticalDivider(width=2, color=PASTEL_PURPLE),
+    # Content column with mode tabs and main content
+    content_column = ft.Column([
+        mode_tabs,  # Navigation buttons moved here
         ft.Container(
             main_content,
+            padding=ft.padding.only(top=0, bottom=12),  # No left/right padding, inherits from parent
             expand=True,
-            alignment=ft.alignment.top_left,  # Ensure content starts at top
-            bgcolor=WHITE,
         ),
-    ], expand=True, spacing=0, alignment=ft.MainAxisAlignment.START)
+    ], spacing=0, expand=True)
+    
+    # Content container with specified structure (wrapped in Column for scrolling)
+    content = ft.Container(
+        expand=True,
+        alignment=ft.alignment.top_left,
+        padding=ft.padding.only(left=24, right=24, top=0),  # Specified padding
+        content=ft.Column(
+            [content_column],
+            scroll=ft.ScrollMode.AUTO,  # Enable scrolling if needed
+            expand=True,
+        ),
+        bgcolor=WHITE,
+        margin=ft.margin.all(0),  # Remove stray margins
+    )
+    
+    # Main app layout with proper Row structure
+    main_app_content = ft.Column([
+        ft.Row(
+            controls=[sidebar, divider, content],
+            spacing=0,
+            expand=True,
+            vertical_alignment=ft.CrossAxisAlignment.START,  # Align to top
+        ),
+    ], spacing=0, expand=True)
+    
+    main_app_layout = main_app_content
 
     # Complete the enter_main_app function now that we have all components
     def complete_enter_main_app(e=None):
