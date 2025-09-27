@@ -1,3 +1,9 @@
+"""
+Button Handler Module
+Central module that connects UI buttons to their respective implementation files.
+This allows team members to work on different features independently.
+"""
+
 from app import audio
 from app.transcription import Transcriber
 from app.handlers.class_handlers import ClassHandler
@@ -7,8 +13,9 @@ from pathlib import Path
 import re
 from typing import Any
 
+
 class TranscriptionHandler:
-    def __init__(self, page: ft.Page, class_handler: ClassHandler):
+    def __init__(self, page: ft.Page, class_handler: ClassHandler, settings: dict | None = None):
         """Transcription handler now uses an injected shared ClassHandler.
 
         Args:
@@ -16,14 +23,18 @@ class TranscriptionHandler:
             class_handler: shared ClassHandler instance (injected by ButtonManager)
         """
         self.page = page
-        # Use the shared class handler instead of creating a new one here
         self.class_handler = class_handler
-        self.transcriber = Transcriber(model_size="tiny")  # load once
+        self.settings = settings or {"whisper_model": "tiny"}
+        # Do not load model eagerly; load lazily to respect UI selection and reduce startup time
+        self.transcriber = None
+        self._loaded_model = None
         self.is_recording = False
         self.current_recording = None
+        # Will be attached in ButtonManager.get_callbacks()
+        self.callbacks: dict[str, Any] | None = None
 
     def upload_audio(self, e: ft.FilePickerResultEvent):
-        """Save audio file into class folder, run Whisper, save transcript (sentence split), then summarize."""
+        """Save audio file into class folder, run Whisper, save transcript, then summarize."""
         if not e.files:
             self._show_message("⚠️ No file selected", success=False)
             return
@@ -35,10 +46,24 @@ class TranscriptionHandler:
             # 1. Save audio file
             saved_audio = audio.save_audio_file(file.path, file.name, class_name)
 
-            # 2. Transcribe with Whisper
+            # 2. Transcribe with Whisper using selected model
+            try:
+                desired = self.settings.get('whisper_model', 'tiny') if self.settings else 'tiny'
+            except Exception:
+                desired = 'tiny'
+
+            # (Re)load transcriber if needed
+            if self.transcriber is None or self._loaded_model != desired:
+                try:
+                    self.transcriber = Transcriber(model_size=desired)
+                    self._loaded_model = desired
+                except Exception as err:
+                    self._show_message(f"Failed to load Whisper model '{desired}': {err}", success=False)
+                    return
+
             text = self.transcriber.transcribe_file(saved_audio)
 
-            # 2.5. Format for readability (split by punctuation)
+            # 2.5. Format for readability (split into sentences)
             sentences = re.split(r'(?<=[.!?]) +', text)
             text = "\n".join(sentences)
 
@@ -49,8 +74,22 @@ class TranscriptionHandler:
             with open(transcript_path, "w", encoding="utf-8") as f:
                 f.write(text)
 
-            self._show_message(f"✅ Saved transcript: {transcript_path.name}")
+            self._show_message(f"Saved transcript: {transcript_path.name}", success=True)
             print(f"[INFO] Transcript saved to {transcript_path}")
+
+            # 3.5. Update UI panel with clickable entry
+            if self.callbacks and "display_transcript" in self.callbacks:
+                snippet = text[:100] + ("..." if len(text) > 100 else "")
+                self.callbacks["display_transcript"](
+                    transcript_path.name, snippet, str(transcript_path)
+                )
+
+            # Update file transcription text area if UI provides setter
+            try:
+                if self.callbacks and "set_file_transcription" in self.callbacks:
+                    self.callbacks["set_file_transcription"](text)
+            except Exception:
+                pass
 
             # 4. Summarize transcript into summaries folder
             try:
@@ -59,86 +98,52 @@ class TranscriptionHandler:
                     None,             # output ignored (summarizer builds metadata filename)
                     class_name=class_name
                 )
-                self._show_message(f"📄 Summary generated: {Path(summary_path).name}")
+                self._show_message(f"Summary generated: {Path(summary_path).name}", success=True)
                 print(f"[INFO] Summary saved to {summary_path}")
             except Exception as err:
-                self._show_message(f"⚠️ Summarization failed: {err}", success=False)
+                self._show_message(f"Summarization failed: {err}", success=False)
 
         except Exception as err:
-            self._show_message(f"❌ Error: {err}", success=False)
+            self._show_message(f"Error: {err}", success=False)
 
     # ------------------------
-    # Stubs so UI buttons don’t break
+    # Recording stubs
     # ------------------------
 
     def start_recording(self, e: ft.ControlEvent = None):
         if not self.is_recording:
             self.is_recording = True
-            self._show_message("🎤 Start recording (stub) - not yet implemented")
+            self._show_message("🎤 Start recording (stub)", success=True)
         else:
-            self._show_message("⚠️ Already recording", success=False)
+            self._show_message("Already recording", success=False)
 
     def stop_recording(self, e: ft.ControlEvent = None):
         if self.is_recording:
             self.is_recording = False
-            self._show_message("⏹️ Stop recording (stub) - not yet implemented")
+            self._show_message("⏹️ Stop recording (stub)", success=True)
         else:
-            self._show_message("⚠️ Not currently recording!", success=False)
-    
-    # NOTE: Manual transcribe_audio method removed. Auto-transcription will be
-    # triggered automatically after upload or recording stop by future logic.
-    
-    def upload_audio(self, e: Any = None):
-        """
-        Handle uploading audio file for transcription
-        
-        TODO: Implement the following:
-        1. Show file picker for audio files
-        2. Validate audio format and size
-        3. Load audio file
-        4. Display audio player controls
-        5. Prepare for transcription
-        """
-        # Placeholder implementation
-        self._show_message("📂 Upload Audio - Ready for implementation!")
-        
-        # Example implementation:
-        # audio_formats = ['.wav', '.mp3', '.m4a', '.flac']
-        # file_path = self._show_file_picker(audio_formats)
-        # if file_path:
-        #     if self._validate_audio_file(file_path):
-        #         self._load_audio_file(file_path)
-        #         self._show_audio_player(file_path)
-        #         self._show_message(f"✅ Audio loaded: {file_path}")
-        #     else:
-        #         self._show_message("❌ Invalid audio file", success=False)
-    
+            self._show_message("Not currently recording", success=False)
+
     def play_audio(self, e: Any = None):
-        """
-        Handle playing audio file
-        
-        TODO: Implement the following:
-        1. Check if audio file is loaded
-        2. Initialize audio playback
-        3. Start playing audio
-        4. Update playback UI controls
-        5. Handle playback errors
-        """
-        # Placeholder implementation
-        self._show_message("▶️ Play Audio - Ready for implementation!")
-    
+        """Stub: Handle playing audio file"""
+        self._show_message("▶️ Play Audio - Ready for implementation!", success=True)
+
     def pause_audio(self, e: Any = None):
-        """
-        Handle pausing audio playback
-        
-        TODO: Implement the following:
-        1. Pause current audio playback
-        2. Update UI controls
-        3. Save playback position
-        """
-        # Placeholder implementation
-        self._show_message("⏸️ Pause Audio - Ready for implementation!")
-    
+        """Stub: Handle pausing audio playback"""
+        self._show_message("⏸️ Pause Audio - Ready for implementation!", success=True)
+
+    # ------------------------
+    # Unified message style
+    # ------------------------
+
     def _show_message(self, message: str, success: bool = True):
-        color = ft.colors.GREEN if success else ft.colors.RED
-        self.page.show_snack_bar(ft.SnackBar(content=ft.Text(message), bgcolor=color))
+        """Show styled snackbar notifications"""
+        # Calmer palette
+        bgcolor = "#66A36C" if success else "#6A2830"
+        self.page.show_snack_bar(
+            ft.SnackBar(
+                content=ft.Text(message, color="white"),
+                bgcolor=bgcolor,
+                duration=2000,
+            )
+        )

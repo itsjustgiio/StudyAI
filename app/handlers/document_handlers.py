@@ -12,6 +12,22 @@ TODO for team members:
 
 import flet as ft
 from typing import Any
+from pathlib import Path
+import shutil
+import tempfile
+
+# Optional OCRAgent import (preferred) or fallback to pytesseract
+try:
+    from app.agents.ocr_agent import OCRAgent
+    OCR_AGENT_AVAILABLE = True
+except Exception:
+    OCR_AGENT_AVAILABLE = False
+    try:
+        import pytesseract
+        from PIL import Image
+        OCR_AVAILABLE = True
+    except Exception:
+        OCR_AVAILABLE = False
 
 
 class DocumentHandler:
@@ -33,8 +49,94 @@ class DocumentHandler:
         4. Display extracted text in UI
         5. Save document reference for later use
         """
-        # Placeholder implementation
-        self._show_message("📄 Upload Document - Ready for implementation!")
+        # Accept either an event from FilePicker or a direct path
+        try:
+            file_path = None
+            if e is None:
+                self._show_message("No file selected", success=False)
+                return ""
+
+            # If e has attribute files (FilePicker event)
+            if hasattr(e, 'files') and e.files:
+                # Flet FilePicker gives a list of files with .path and .name
+                file_path = e.files[0].path
+            elif isinstance(e, str):
+                file_path = e
+            elif hasattr(e, 'file'):
+                file_path = getattr(e, 'file')
+
+            if not file_path:
+                self._show_message("No file selected", success=False)
+                return ""
+
+            p = Path(file_path)
+            suffix = p.suffix.lower()
+
+            # Determine destination: save raw file into current class folder
+            try:
+                class_name = current_class if (current_class := getattr(self, 'current_class', None)) else "General"
+            except Exception:
+                class_name = "General"
+
+            target_dir = Path("data/classes") / class_name / "notes" / "Imported"
+            target_dir.mkdir(parents=True, exist_ok=True)
+            target_path = target_dir / p.name
+            shutil.copy(file_path, target_path)
+
+            extracted_text = ""
+            if suffix in ['.txt']:
+                extracted_text = target_path.read_text(encoding='utf-8', errors='ignore')
+            elif suffix in ['.pdf']:
+                # lightweight PDF text extraction using PyPDF2 if available
+                try:
+                    import PyPDF2
+                    with open(target_path, 'rb') as fh:
+                        reader = PyPDF2.PdfReader(fh)
+                        pages = [pg.extract_text() or "" for pg in reader.pages]
+                        extracted_text = "\n\n".join(pages)
+                except Exception:
+                    extracted_text = ""  # fallback to empty
+            elif suffix in ['.docx']:
+                try:
+                    import docx
+                    doc = docx.Document(target_path)
+                    extracted_text = "\n\n".join(p.text for p in doc.paragraphs)
+                except Exception:
+                    extracted_text = ""
+            elif suffix in ['.jpg', '.jpeg', '.png']:
+                # run OCR via OCRAgent if available, otherwise try pytesseract directly
+                if OCR_AGENT_AVAILABLE:
+                    try:
+                        agent = OCRAgent()
+                        extracted_text = agent.run(str(target_path))
+                    except Exception:
+                        extracted_text = ""
+                elif OCR_AVAILABLE:
+                    try:
+                        img = Image.open(target_path)
+                        extracted_text = pytesseract.image_to_string(img)
+                    except Exception:
+                        extracted_text = ""
+                else:
+                    extracted_text = ""  # OCR not available in this environment
+
+            # Save extracted text as a .txt next to the imported file for future reference
+            try:
+                if extracted_text and extracted_text.strip():
+                    txt_path = target_path.with_suffix('.txt')
+                    txt_path.write_text(extracted_text, encoding='utf-8')
+            except Exception:
+                pass
+
+            # Update the notes editor value if ref was provided (UI will pass notes_ref)
+            # The UI passes notes_ref as second arg in callbacks.get('upload_document')
+            # If this handler is called directly, simply return the extracted text
+            self._show_message(f"📄 Imported {target_path.name}")
+            return extracted_text
+
+        except Exception as exc:
+            self._show_message(f"❌ Failed to import document: {exc}", success=False)
+            return ""
         
         # Example implementation structure:
         # file_path = self._show_file_picker(self.supported_formats)
@@ -93,7 +195,7 @@ class DocumentHandler:
     
     def _show_message(self, message: str, success: bool = True):
         """Helper method to show messages"""
-        color = ft.colors.GREEN if success else ft.colors.RED
+        color = "#66A36C" if success else "#6A2830"
         self.page.show_snack_bar(
             ft.SnackBar(content=ft.Text(message), bgcolor=color)
         )

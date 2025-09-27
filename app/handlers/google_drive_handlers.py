@@ -175,7 +175,7 @@ class GoogleDriveHandler:
     # ------------------ Utilities ------------------
 
     def _show_message(self, message: str, success: bool = True):
-        color = ft.colors.GREEN if success else ft.colors.RED
+        color = "#66A36C" if success else "#6A2830"
         self.page.show_snack_bar(ft.SnackBar(content=ft.Text(message), bgcolor=color))
         self.page.update()
 
