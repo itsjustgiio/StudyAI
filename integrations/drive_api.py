@@ -4,7 +4,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 import io
 
-from oauth import get_credentials
+from integrations.oauth import get_credentials
 
 # Common mime types you may care about
 MIME = {
