@@ -1,67 +1,105 @@
-import flet as ft
-from typing import Any
+# app/handlers/class_handlers.py
+from __future__ import annotations
+
 from pathlib import Path
+from typing import Any
+import flet as ft
 
 
 class ClassHandler:
-    """Handles class management operations"""
-    
+    """
+    Minimal, working class manager.
+    - Keeps a list of classes in data/classes/
+    - Ensures a default 'General' class exists
+    - Provides add / switch / delete helpers
+    - Emits snackbar messages for UX
+    """
+
+    BASE = Path("data/classes")
+
     def __init__(self, page: ft.Page):
         self.page = page
-        self.current_class = "General"
-        self.classes = ["General"]
 
-        # Ensure base folder exists
-        base_dir = Path("data/classes")
-        base_dir.mkdir(parents=True, exist_ok=True)
-        (base_dir / self.current_class).mkdir(parents=True, exist_ok=True)
+        # Ensure base directory and default class exist
+        self.BASE.mkdir(parents=True, exist_ok=True)
+
+        self.classes = sorted([p.name for p in self.BASE.iterdir() if p.is_dir()])
+        if not self.classes:
+            (self.BASE / "General").mkdir(parents=True, exist_ok=True)
+            self.classes = ["General"]
+
+        self.current_class = self.classes[0]
+
+    # ---------- helpers ----------
+
+    def _show(self, msg: str, ok: bool = True) -> None:
+        color = ft.colors.GREEN if ok else ft.colors.RED
+        self.page.show_snack_bar(ft.SnackBar(content=ft.Text(msg), bgcolor=color))
+
+    @staticmethod
+    def _sanitize(name: str) -> str:
+        """Make a filesystem-safe class name (very basic)."""
+        keep = []
+        for ch in name.strip():
+            keep.append(ch if ch.isalnum() or ch in (" ", "_", "-") else "_")
+        out = "".join(keep).strip()
+        return out or "Untitled"
+
+    # ---------- public API (used by UI/ButtonManager) ----------
 
     def get_current_class(self) -> str:
         return self.current_class
-    def add_new_class(self, e: Any = None, class_name: str | None = None):
-        """Add a new class by name (from UI or event)."""
-        if class_name is None:
-            # fallback if called with event only
-            class_name = getattr(e.control, "value", None) if e else None
+
+    def list_classes(self) -> list[str]:
+        return list(self.classes)
+
+    def add_new_class(self, e: Any = None, class_name: str | None = None) -> None:
+        """Add a class by name; if called from UI event, read value from control."""
+        if class_name is None and e is not None:
+            class_name = getattr(e.control, "value", None)
+
+        class_name = self._sanitize(class_name or "")
         if not class_name:
-            self._show_message("⚠️ Please enter a class name!", success=False)
+            self._show("⚠️ Please enter a class name!", ok=False)
             return
 
         if class_name in self.classes:
-            self._show_message("⚠️ Class already exists", success=False)
+            self._show("⚠️ Class already exists", ok=False)
             return
 
-        class_dir = Path("data/classes") / class_name
-        class_dir.mkdir(parents=True, exist_ok=True)
-
+        (self.BASE / class_name).mkdir(parents=True, exist_ok=True)
         self.classes.append(class_name)
+        self.classes.sort()
         self.current_class = class_name
-        self._show_message(f"✅ Created and switched to class: {class_name}")
+        self._show(f"✅ Created and switched to class: {class_name}")
 
-    def switch_class(self, e: Any = None, class_name: str | None = None):
-        """Switch active class by name (from UI or event)."""
-        if class_name is None:
-            class_name = getattr(e.control, "value", None) if e else None
+    def switch_class(self, e: Any = None, class_name: str | None = None) -> None:
+        """Switch currently active class."""
+        if class_name is None and e is not None:
+            class_name = getattr(e.control, "value", None)
 
-        if class_name and class_name in self.classes:
+        if class_name in self.classes:
             self.current_class = class_name
-            self._show_message(f"✅ Switched to: {class_name}")
+            self._show(f"✅ Switched to: {class_name}")
         else:
-            self._show_message("⚠️ Invalid class selection", success=False)
+            self._show("⚠️ Invalid class selection", ok=False)
 
-    def delete_class(self, e: Any = None):
-        if len(self.classes) <= 1:
-            self._show_message("⚠️ Cannot delete the last remaining class", success=False)
+    def delete_class(self, e: Any = None, class_name: str | None = None) -> None:
+        """
+        Remove a class directory from the list (non-destructive by default).
+        NOTE: To actually delete files, you could add shutil.rmtree here.
+        """
+        target = class_name or (self.current_class if self.current_class else None)
+        if not target or target not in self.classes:
+            self._show("⚠️ No such class", ok=False)
             return
 
-        to_delete = self.current_class
-        try:
-            self.classes.remove(to_delete)
-            self.current_class = self.classes[0]
-            self._show_message(f"🗑️ Deleted class: {to_delete}, switched to {self.current_class}")
-        except Exception as err:
-            self._show_message(f"❌ Failed to delete class: {err}", success=False)
+        if len(self.classes) <= 1:
+            self._show("⚠️ Cannot delete the last remaining class", ok=False)
+            return
 
-    def _show_message(self, message: str, success: bool = True):
-        color = ft.colors.GREEN if success else ft.colors.RED
-        self.page.show_snack_bar(ft.SnackBar(content=ft.Text(message), bgcolor=color))
+        # Remove from in-memory list (keep files for safety)
+        self.classes.remove(target)
+        # Switch to first remaining class
+        self.current_class = self.classes[0]
+        self._show(f"🗑️ Removed class: {target}. Active: {self.current_class}")
