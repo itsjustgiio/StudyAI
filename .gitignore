@@ -35,6 +35,7 @@ client_secret.json
 token.json
 
 # --- Audio / transcription test data (comment out if you need to track audio) ---
+data/classes
 data/transcripts/samples/
 *.wav
 *.mp3
