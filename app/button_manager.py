@@ -35,8 +35,8 @@ class ButtonManager:
         return {
             # Class Management
             'add_class': self.class_handler.add_new_class,
-            'switch_class': self.class_handler.switch_class,
-            'delete_class': self.class_handler.delete_class,
+            'switch_class': self.class_handler.on_class_change,
+            'delete_class': lambda e: None,  # TODO: Implement delete_class method
             
             # Notes Management
             'save_notes': self.notes_handler.save_notes,
