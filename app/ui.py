@@ -215,6 +215,7 @@ def build_ui(page: ft.Page, callbacks=None):
         tooltip="Add New Class",
         on_click=open_add_class_dialog,  # TODO: was `open_add_class_dialog` → wire in main.py to call appropriate manager via main.py
         icon_color=WHITE,
+        bgcolor=PASTEL_PURPLE,  # Make + button purple
     )
 
     # Refs & state
@@ -460,25 +461,13 @@ def build_ui(page: ft.Page, callbacks=None):
             # Main content area - fixed height for consistency
             ft.Container(
                 notes_editor,
-                height=500,  # Fixed height to fit properly within border
+                height=590,  # Fixed height to fit properly within border
                 padding=ft.padding.all(8),  # Internal padding between border and textbox
                 border=ft.border.all(2, PASTEL_PURPLE),
                 border_radius=12,
                 bgcolor=WHITE,
             ),
             # Status area - consistent with other tabs
-            ft.Container(
-                ft.Row([
-                    ft.Icon(ft.icons.INFO_OUTLINE, size=16, color=PASTEL_PURPLE),
-                    ft.Text("💡 Tip: Use bullet points and clear headings for better AI analysis", 
-                           size=12, color=ft.colors.ON_SURFACE, italic=True),
-                ], spacing=8),
-                padding=ft.padding.all(10),
-                height=40,  # Fixed tip area height
-                border_radius=8,
-                bgcolor=ft.colors.SURFACE_VARIANT,
-                margin=ft.margin.only(top=15),
-            ),
         ], spacing=0),
         expand=True,
         border=ft.border.all(2, PASTEL_PURPLE),
@@ -730,24 +719,12 @@ def build_ui(page: ft.Page, callbacks=None):
             # Main content area - fixed height for consistency
             ft.Container(
                 transcription_tabs,
-                height=500,  # Fixed height to match other tabs
+                height=590,  # Fixed height to match other tabs
                 border=ft.border.all(2, PASTEL_PURPLE),
                 border_radius=12,
                 bgcolor=WHITE,
             ),
             # Status area - consistent with other tabs
-            ft.Container(
-                ft.Row([
-                    ft.Icon(ft.icons.INFO_OUTLINE, size=16, color=PASTEL_PURPLE),
-                    ft.Text("💡 Tip: Use live recording or upload audio files for transcription", 
-                           size=12, color=ft.colors.ON_SURFACE, italic=True),
-                ], spacing=8),
-                padding=ft.padding.all(10),
-                height=40,  # Fixed tip area height
-                border_radius=8,
-                bgcolor=ft.colors.SURFACE_VARIANT,
-                margin=ft.margin.only(top=15),
-            ),
         ], spacing=0),
         expand=True,
         border=ft.border.all(2, PASTEL_PURPLE),
@@ -755,7 +732,6 @@ def build_ui(page: ft.Page, callbacks=None):
         padding=ft.padding.all(16),
         bgcolor=SOFT_PURPLE,
     )
-
     sum_mode = ft.Dropdown(
         ref=sum_mode_ref,
         width=220,
@@ -1008,24 +984,12 @@ def build_ui(page: ft.Page, callbacks=None):
             # Main content area - fixed height for consistency
             ft.Container(
                 tabs,
-                height=500,  # Fixed height to match other tabs
+                height=590,  # Fixed height to match other tabs
                 border=ft.border.all(2, PASTEL_PURPLE),
                 border_radius=12,
                 bgcolor=WHITE,
             ),
             # Status area - consistent with other tabs
-            ft.Container(
-                ft.Row([
-                    ft.Icon(ft.icons.INFO_OUTLINE, size=16, color=PASTEL_PURPLE),
-                    ft.Text("💡 Tip: Use the tabs above to analyze your notes with AI tools", 
-                           size=12, color=ft.colors.ON_SURFACE, italic=True),
-                ], spacing=8),
-                padding=ft.padding.all(10),
-                height=40,  # Fixed tip area height
-                border_radius=8,
-                bgcolor=ft.colors.SURFACE_VARIANT,
-                margin=ft.margin.only(top=15),
-            ),
         ], spacing=0),
         expand=True,
         border=ft.border.all(2, PASTEL_PURPLE),
