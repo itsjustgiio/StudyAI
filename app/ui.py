@@ -25,6 +25,15 @@ from pathlib import Path
 
 
 # ============================================================================
+# UI CONSTANTS
+# ============================================================================
+
+# Default content height for all main areas
+# At runtime we compute a responsive `content_height` (sticky) based on the page
+# window height so content areas shrink/expand when the app is resized.
+DEFAULT_CONTENT_HEIGHT = 675  # Fallback fixed height for content areas
+
+# ============================================================================
 # STUB FUNCTIONS - UI PLACEHOLDERS ONLY
 # These are kept only for UI demo purposes and should NOT be used in production
 # ============================================================================
@@ -51,7 +60,9 @@ async def stub_start_transcription(callback):
 
 async def stub_stop_transcription():
     """UI PLACEHOLDER - Replace with app/transcription.py integration"""
-    return None
+    pass
+
+
 
 
 # ----------------------------
@@ -76,6 +87,37 @@ def build_ui(page: ft.Page, callbacks: dict | None = None):
     page.padding = 0  # Remove any default padding
     page.scroll = ft.ScrollMode.AUTO
     page.padding = 0
+    # Responsive (sticky) content height: compute from window height
+    # Use a sensible minimum so small windows don't collapse the UI.
+    content_height = max(300, int(page.window_height * 0.65)) if page.window_height else DEFAULT_CONTENT_HEIGHT
+
+    # Refs for containers whose height should follow `content_height`
+    notes_content_ref: ft.Ref[ft.Container] = ft.Ref[ft.Container]()
+    trans_content_ref: ft.Ref[ft.Container] = ft.Ref[ft.Container]()
+    ai_content_ref: ft.Ref[ft.Container] = ft.Ref[ft.Container]()
+
+    def _on_resize(e=None):
+        """Recompute content_height and apply to main content containers."""
+        nonlocal content_height
+        try:
+            content_height = max(300, int(page.window_height * 0.65))
+        except Exception:
+            content_height = DEFAULT_CONTENT_HEIGHT
+
+        if notes_content_ref.current is not None:
+            notes_content_ref.current.height = content_height
+        if trans_content_ref.current is not None:
+            trans_content_ref.current.height = content_height
+        if ai_content_ref.current is not None:
+            ai_content_ref.current.height = content_height
+
+        try:
+            page.update()
+        except Exception:
+            pass
+
+    # Attach handler so Flet calls it on resize events
+    page.on_resize = _on_resize
     
     # App state
     app_state = {"show_landing": True}
@@ -666,10 +708,11 @@ def build_ui(page: ft.Page, callbacks: dict | None = None):
                 padding=ft.padding.only(bottom=15),
                 height=60,  # Fixed header height matching other tabs
             ),
-            # Main content area - fixed height for consistency
+                        # Main content area - fixed height
             ft.Container(
                 notes_editor_stack,
-                height=590,  # Fixed height to fit properly within border
+                ref=notes_content_ref,
+                height=content_height,
                 padding=ft.padding.all(8),  # Internal padding between border and textbox
                 border=ft.border.all(2, PASTEL_PURPLE),
                 border_radius=12,
@@ -912,10 +955,11 @@ def build_ui(page: ft.Page, callbacks: dict | None = None):
                 padding=ft.padding.only(bottom=15),
                 height=60,  # Fixed header height matching other tabs
             ),
-            # Main content area - fixed height for consistency
+            # Main content area - fixed height
             ft.Container(
                 transcription_tabs,
-                height=590,  # Fixed height to match other tabs
+                ref=trans_content_ref,
+                height=content_height,
                 border=ft.border.all(2, PASTEL_PURPLE),
                 border_radius=12,
                 bgcolor=WHITE,
@@ -1177,10 +1221,11 @@ def build_ui(page: ft.Page, callbacks: dict | None = None):
                 padding=ft.padding.only(bottom=15),
                 height=60,  # Fixed header height matching other tabs
             ),
-            # Main content area - fixed height for consistency
+            # Main content area - fixed height
             ft.Container(
                 tabs,
-                height=590,  # Fixed height to match other tabs
+                ref=ai_content_ref,
+                height=content_height,
                 border=ft.border.all(2, PASTEL_PURPLE),
                 border_radius=12,
                 bgcolor=WHITE,
@@ -1222,6 +1267,8 @@ def build_ui(page: ft.Page, callbacks: dict | None = None):
 
     main_content.content = notes_view  # Content handled directly, no wrapper needed
 
+
+    
     # Content column with mode tabs and main content
     content_column = ft.Column([
         mode_tabs,  # Navigation buttons moved here
@@ -1279,6 +1326,8 @@ def build_ui(page: ft.Page, callbacks: dict | None = None):
 
     # Initialize tree UI
     build_tree_ui()
+    
+
     
     # Add overlays and components to page
     page.overlay.extend([file_picker, add_folder_dialog, add_note_dialog, document_picker])
