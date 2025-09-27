@@ -55,3 +55,6 @@ __pycache__/
 
 app/__pycache__
 app\__pycache__\__init__.cpython-311.pyc
+
+__pycache__/
+*.pyc
