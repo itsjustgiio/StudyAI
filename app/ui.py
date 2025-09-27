@@ -791,10 +791,19 @@ def build_ui(page: ft.Page, callbacks: dict | None = None):
     
     upload_btn = ft.ElevatedButton(
         "Upload Audio File",
+<<<<<<< HEAD
         on_click=lambda e: file_picker.pick_files(
             allowed_extensions=["mp3", "wav", "m4a", "flac", "ogg", "mp4", "mov", "mkv"]
         ),
         style=ft.ButtonStyle(bgcolor=PASTEL_PURPLE, color=ft.colors.ON_PRIMARY),
+=======
+        icon=ft.icons.UPLOAD_FILE,
+        on_click=lambda e: None,  # TODO: was `lambda _: file_picker.pick_files(allowed_extensions=["mp3", "wav", "m4a", "flac", "ogg"])` → wire in main.py to call app/pdf_manager.py (import/export/list PDFs)
+        style=ft.ButtonStyle(
+            bgcolor=PASTEL_PURPLE,
+            color=ft.colors.ON_PRIMARY,
+        )
+>>>>>>> d2f52f716fe9769aa38efdf233df39f94473fb1b
     )
     
     transcribe_btn = ft.ElevatedButton(

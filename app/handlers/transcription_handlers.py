@@ -5,7 +5,7 @@ from app import summarizer
 import flet as ft
 from pathlib import Path
 import re
-
+from typing import Any
 
 class TranscriptionHandler:
     def __init__(self, page: ft.Page, class_handler: ClassHandler):
