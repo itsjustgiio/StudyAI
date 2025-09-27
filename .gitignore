@@ -49,3 +49,6 @@ data/classes/**
 !data/classes/
 !data/classes/.gitkeep
 token.json
+
+__pycache__/
+*.pyc
