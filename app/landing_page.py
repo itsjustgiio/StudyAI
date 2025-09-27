@@ -16,11 +16,17 @@ def create_landing_page(page: ft.Page, on_get_started):
     
     # Get responsive sizing based on window dimensions
     def get_responsive_sizes():
-        window_width = page.window_width or 1200
-        window_height = page.window_height or 800
+        # Ensure we have valid window dimensions with proper fallbacks
+        window_width = getattr(page, 'window_width', None) or 1200
+        window_height = getattr(page, 'window_height', None) or 800
         
-        # Scale factors based on window size
+        # Ensure minimum values to prevent division by zero or negative values
+        window_width = max(800, window_width)
+        window_height = max(600, window_height)
+        
+        # Scale factors based on window size with safer calculations
         scale_factor = min(window_width / 1200, window_height / 800)
+        scale_factor = max(0.7, min(1.5, scale_factor))  # Clamp between 0.7 and 1.5
         
         return {
             'logo_size': max(80, int(100 * scale_factor)),
@@ -88,7 +94,7 @@ def create_landing_page(page: ft.Page, on_get_started):
                     
                     ft.Container(height=sizes['spacing_large']),  # Responsive spacing
                     
-                    # Get Started button - responsive size
+                    # Get Started button - responsive size with safer calculations
                     ft.ElevatedButton(
                         content=ft.Text("Get Started", size=sizes['button_text_size'], weight=ft.FontWeight.BOLD),
                         on_click=on_get_started,
@@ -96,13 +102,13 @@ def create_landing_page(page: ft.Page, on_get_started):
                             bgcolor=PASTEL_PURPLE,
                             color=WHITE,
                             padding=ft.padding.symmetric(
-                                horizontal=max(40, int(50 * min(page.window_width or 1200, page.window_height or 800) / 1000)),
-                                vertical=max(15, int(20 * min(page.window_width or 1200, page.window_height or 800) / 1000))
+                                horizontal=40,  # Fixed padding to prevent layout issues
+                                vertical=15
                             ),
                             shape=ft.RoundedRectangleBorder(radius=30),
                         ),
-                        height=max(50, int(60 * min(page.window_width or 1200, page.window_height or 800) / 1000)),
-                        width=max(200, int(240 * min(page.window_width or 1200, page.window_height or 800) / 1000)),
+                        height=60,  # Fixed height to prevent layout issues
+                        width=240,  # Fixed width to prevent layout issues
                     ),
                 ], 
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -145,7 +151,7 @@ def create_landing_page(page: ft.Page, on_get_started):
         ),
         bgcolor=WHITE,
         width=None,  # Full viewport width
-        height=page.window_height or 800,  # Full viewport height (100vh equivalent)
+        height=max(600, getattr(page, 'window_height', None) or 800),  # Full viewport height with safe minimum
         alignment=ft.alignment.center,
     )
     
@@ -419,10 +425,14 @@ def create_landing_page(page: ft.Page, on_get_started):
     # Update sizes and hero height when window changes
     def on_resize(e):
         nonlocal sizes, hero_section
-        sizes = get_responsive_sizes()
-        # Update hero section height to match new viewport height
-        hero_section.height = page.window_height or 800
-        page.update()
+        try:
+            sizes = get_responsive_sizes()
+            # Update hero section height to match new viewport height with safe fallback
+            hero_section.height = max(600, getattr(page, 'window_height', None) or 800)
+            page.update()
+        except Exception:
+            # If resize fails, ignore silently to prevent crashes
+            pass
     
     page.on_resize = on_resize
     
