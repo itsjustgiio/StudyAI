@@ -85,8 +85,9 @@ def build_ui(page: ft.Page, callbacks: dict | None = None):
     page.window_maximized = True  # Start maximized for full screen experience
     page.spacing = 0  # Remove any default spacing
     page.padding = 0  # Remove any default padding
-    page.scroll = ft.ScrollMode.AUTO
-    page.padding = 0
+    page.scroll = None  # Remove scroll to enable full vertical expansion
+    page.auto_scroll = False  # Disable auto scroll for full control  
+    page.vertical_alignment = ft.MainAxisAlignment.START  # Align content to top
     # Responsive (sticky) content height: compute from window height
     # Use a sensible minimum so small windows don't collapse the UI.
     content_height = max(300, int(page.window_height * 0.65)) if page.window_height else DEFAULT_CONTENT_HEIGHT
@@ -708,18 +709,17 @@ def build_ui(page: ft.Page, callbacks: dict | None = None):
                 padding=ft.padding.only(bottom=15),
                 height=60,  # Fixed header height matching other tabs
             ),
-                        # Main content area - fixed height
+                        # Main content area - expands to fill all available space  
             ft.Container(
                 notes_editor_stack,
-                ref=notes_content_ref,
-                height=content_height,
+                expand=True,  # Dynamic scaling with user's screen size
                 padding=ft.padding.all(8),  # Internal padding between border and textbox
                 border=ft.border.all(2, PASTEL_PURPLE),
                 border_radius=12,
                 bgcolor=WHITE,
             ),
             # Status area - consistent with other tabs
-        ], spacing=0),
+        ], spacing=0, expand=True),  # Allow inner containers to expand
         expand=True,
         border=ft.border.all(2, PASTEL_PURPLE),
         border_radius=12,
@@ -955,17 +955,16 @@ def build_ui(page: ft.Page, callbacks: dict | None = None):
                 padding=ft.padding.only(bottom=15),
                 height=60,  # Fixed header height matching other tabs
             ),
-            # Main content area - fixed height
+            # Main content area - expands to fill all available space
             ft.Container(
                 transcription_tabs,
-                ref=trans_content_ref,
-                height=content_height,
+                expand=True,  # Dynamic scaling with user's screen size
                 border=ft.border.all(2, PASTEL_PURPLE),
                 border_radius=12,
                 bgcolor=WHITE,
             ),
             # Status area - consistent with other tabs
-        ], spacing=0),
+        ], spacing=0, expand=True),  # Allow inner containers to expand
         expand=True,
         border=ft.border.all(2, PASTEL_PURPLE),
         border_radius=12,
@@ -1221,17 +1220,16 @@ def build_ui(page: ft.Page, callbacks: dict | None = None):
                 padding=ft.padding.only(bottom=15),
                 height=60,  # Fixed header height matching other tabs
             ),
-            # Main content area - fixed height
+            # Main content area - expands to fill all available space
             ft.Container(
                 tabs,
-                ref=ai_content_ref,
-                height=content_height,
+                expand=True,  # Dynamic scaling with user's screen size
                 border=ft.border.all(2, PASTEL_PURPLE),
                 border_radius=12,
                 bgcolor=WHITE,
             ),
             # Status area - consistent with other tabs
-        ], spacing=0),
+        ], spacing=0, expand=True),  # Allow inner containers to expand
         expand=True,
         border=ft.border.all(2, PASTEL_PURPLE),
         border_radius=12,
@@ -1274,8 +1272,7 @@ def build_ui(page: ft.Page, callbacks: dict | None = None):
         mode_tabs,  # Navigation buttons moved here
         ft.Container(
             main_content,
-            padding=ft.padding.only(top=0, bottom=12),  # No left/right padding, inherits from parent
-            expand=True,
+            expand=True,  # Allow full expansion
         ),
     ], spacing=0, expand=True)
     
@@ -1286,8 +1283,7 @@ def build_ui(page: ft.Page, callbacks: dict | None = None):
         padding=ft.padding.only(left=24, right=24, top=0),  # Specified padding
         content=ft.Column(
             [content_column],
-            scroll=ft.ScrollMode.AUTO,  # Enable scrolling if needed
-            expand=True,
+            expand=True,  # Remove scroll to allow full expansion
         ),
         bgcolor=WHITE,
         margin=ft.margin.all(0),  # Remove stray margins
