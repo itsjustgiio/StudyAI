@@ -1,115 +1,153 @@
+
 """
 Class Management Handler
-Handles all class-related button functionality.
+Handles all class-related button functionality for the StudyAI UI.
+This module is intentionally UI-aware: it receives refs from ui.py and mutates
+those controls directly so we don't need the rest of the app to be present.
 
-TODO for team members:
-- Implement actual class creation logic
-- Add class validation
-- Implement class switching with data persistence
-- Add class deletion with confirmation
-- Integrate with database/storage system
+It provides safe no-op fallbacks for any missing refs.
+
+Public API:
+    - ClassHandler(page, *, class_dropdown_ref, add_class_dialog_ref,
+                   new_class_name_ref, notes_ref)
+    - on_class_change(event)
+    - open_add_class_dialog(event)
+    - close_add_class_dialog(event)
+    - add_new_class(event)
+    - save_current_class_data()
 """
 
+from typing import Dict, Any, Optional, List
 import flet as ft
-from typing import Any
+
+
+def _safe_get(ref: Optional[ft.Ref]):
+    return ref.current if ref is not None else None
 
 
 class ClassHandler:
-    """Handles class management operations"""
-    
-    def __init__(self, page: ft.Page):
+    def __init__(
+        self,
+        page: ft.Page,
+        *,
+        class_dropdown_ref: Optional[ft.Ref] = None,
+        add_class_dialog_ref: Optional[ft.Ref] = None,
+        new_class_name_ref: Optional[ft.Ref] = None,
+        notes_ref: Optional[ft.Ref] = None,
+    ):
         self.page = page
-        # TODO: Initialize any required services (database, file system, etc.)
-    
-    def add_new_class(self, e: Any = None):
-        """
-        Handle adding a new class
-        
-        TODO: Implement the following:
-        1. Show dialog to get class name from user
-        2. Validate class name (not empty, not duplicate)
-        3. Create new class in storage system
-        4. Update UI dropdown with new class
-        5. Switch to the new class
-        6. Show success message
-        """
-        # Placeholder implementation
-        self._show_message("🏫 Add New Class - Ready for implementation!")
-        
-        # Example of what the implementation might look like:
-        # class_name = self._get_class_name_from_dialog()
-        # if self._validate_class_name(class_name):
-        #     self._create_class(class_name)
-        #     self._update_class_dropdown()
-        #     self._switch_to_class(class_name)
-        #     self._show_message(f"✅ Created class: {class_name}")
-    
-    def switch_class(self, e: Any = None):
-        """
-        Handle switching between classes
-        
-        TODO: Implement the following:
-        1. Get selected class from dropdown
-        2. Save current class data
-        3. Load data for selected class
-        4. Update all UI components with new class data
-        5. Show confirmation message
-        """
-        # Placeholder implementation
-        self._show_message("🔄 Switch Class - Ready for implementation!")
-        
-        # Example implementation:
-        # selected_class = e.control.value if hasattr(e.control, 'value') else None
-        # if selected_class:
-        #     self._save_current_class_data()
-        #     self._load_class_data(selected_class)
-        #     self._update_ui_components()
-        #     self._show_message(f"✅ Switched to: {selected_class}")
-    
-    def delete_class(self, e: Any = None):
-        """
-        Handle deleting a class
-        
-        TODO: Implement the following:
-        1. Show confirmation dialog
-        2. Prevent deletion of last remaining class
-        3. Delete class from storage
-        4. Update dropdown
-        5. Switch to another class
-        6. Show success message
-        """
-        # Placeholder implementation
-        self._show_message("🗑️ Delete Class - Ready for implementation!")
-        
-        # Example implementation:
-        # if self._confirm_deletion():
-        #     current_class = self._get_current_class()
-        #     if self._can_delete_class(current_class):
-        #         self._delete_class_data(current_class)
-        #         self._update_class_dropdown()
-        #         self._switch_to_default_class()
-        #         self._show_message(f"✅ Deleted class: {current_class}")
-    
-    def _show_message(self, message: str, success: bool = True):
-        """Helper method to show messages"""
-        color = ft.colors.GREEN if success else ft.colors.RED
-        self.page.show_snack_bar(
-            ft.SnackBar(content=ft.Text(message), bgcolor=color)
-        )
-    
-    # TODO: Add helper methods for team members to implement
-    # def _get_class_name_from_dialog(self) -> str:
-    #     """Show dialog and return class name"""
-    #     pass
-    # 
-    # def _validate_class_name(self, name: str) -> bool:
-    #     """Validate class name"""
-    #     pass
-    # 
-    # def _create_class(self, name: str):
-    #     """Create new class in storage"""
-    #     pass
-    # 
-    # def _update_class_dropdown(self):
-    #     """Update UI dropdown with current classes"""
-    #     pass
+        self.class_dropdown_ref = class_dropdown_ref
+        self.add_class_dialog_ref = add_class_dialog_ref
+        self.new_class_name_ref = new_class_name_ref
+        self.notes_ref = notes_ref
+
+        # In-memory store (UI session only)
+        self.classes: List[str] = ["General"]
+        self.selected: str = "General"
+        self.data: Dict[str, Dict[str, Any]] = {
+            "General": {"notes": "", "transcriptions": [], "ai_history": []}
+        }
+
+        # Initialize dropdown if present
+        dd = _safe_get(self.class_dropdown_ref)
+        if dd is not None:
+            dd.options = [ft.dropdown.Option("General")]
+            dd.value = "General"
+
+    # ---------------------------
+    # Dialog controls
+    # ---------------------------
+    def open_add_class_dialog(self, _=None):
+        dlg = _safe_get(self.add_class_dialog_ref)
+        if dlg is not None:
+            dlg.open = True
+            self.page.update()
+
+    def close_add_class_dialog(self, _=None):
+        dlg = _safe_get(self.add_class_dialog_ref)
+        if dlg is not None:
+            dlg.open = False
+            self.page.update()
+
+    # ---------------------------
+    # Core actions
+    # ---------------------------
+    def _validate_class_name(self, name: str) -> Optional[str]:
+        name = (name or "").strip()
+        if not name:
+            return "Please enter a class name."
+        if any(ch in name for ch in "<>:/\\|?*\"'\n\t"):
+            return "Class name has invalid characters."
+        if name in self.classes:
+            return "Class already exists."
+        if len(name) > 40:
+            return "Class name too long (max 40)."        
+        return None
+
+    def add_new_class(self, _=None):
+        tf = _safe_get(self.new_class_name_ref)
+        name = (tf.value if tf is not None else "").strip()
+        err = self._validate_class_name(name)
+        if err:
+            # surface error unobtrusively
+            try:
+                self.page.snack_bar = ft.SnackBar(ft.Text(err))
+                self.page.snack_bar.open = True
+                self.page.update()
+            except Exception:
+                pass
+            return
+
+        # Create class
+        self.classes.append(name)
+        self.data[name] = {"notes": "", "transcriptions": [], "ai_history": []}
+        self.selected = name
+
+        # Update dropdown
+        dd = _safe_get(self.class_dropdown_ref)
+        if dd is not None:
+            dd.options = [ft.dropdown.Option(c) for c in self.classes]
+            dd.value = name
+
+        # Close dialog and clear input
+        dlg = _safe_get(self.add_class_dialog_ref)
+        if dlg is not None:
+            dlg.open = False
+        if tf is not None:
+            tf.value = ""
+
+        self.page.update()
+
+    def save_current_class_data(self):
+        # Save notes text into current class
+        notes = _safe_get(self.notes_ref)
+        if self.selected not in self.data:
+            self.data[self.selected] = {"notes": "", "transcriptions": [], "ai_history": []}
+        if notes is not None:
+            self.data[self.selected]["notes"] = notes.value or ""
+
+    def on_class_change(self, e=None):
+        # Persist current data first
+        self.save_current_class_data()
+
+        dd = _safe_get(self.class_dropdown_ref)
+        if dd is None:
+            return
+
+        new_name = (dd.value or "General").strip()
+        if new_name not in self.classes:
+            # If user typed a new value manually (editable dropdown), normalize
+            if new_name:
+                self.classes.append(new_name)
+                self.data.setdefault(new_name, {"notes": "", "transcriptions": [], "ai_history": []})
+            else:
+                new_name = "General"
+
+        self.selected = new_name
+
+        # Load notes into editor
+        notes = _safe_get(self.notes_ref)
+        if notes is not None:
+            notes.value = self.data.get(new_name, {}).get("notes", "")
+
+        self.page.update()
