@@ -24,3 +24,6 @@ tqdm==4.66.5              # Progress bars (nice for long transcription)
 
 # Testing (optional but helpful)
 pytest==8.3.3
+
+
+reportlab==4.2.5
