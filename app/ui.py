@@ -19,7 +19,9 @@
 from __future__ import annotations
 import asyncio
 import flet as ft
+
 from .landing_page import create_landing_page
+from .class_handlers import ClassHandler  # keep only if you actually use it
 
 
 # ============================================================================
@@ -101,13 +103,14 @@ def build_ui(page: ft.Page, callbacks=None):
     
     def save_current_class_data():
         """Save current content to the selected class - UI ONLY"""
-        # TODO: Wire in main.py to call appropriate class manager
-        pass
+        _class_handler.save_current_class_data()
     
     def load_class_data(class_name):
-        """Load data for the selected class - UI ONLY"""
-        # TODO: Wire in main.py to call appropriate class manager
-        pass
+    # Select class in dropdown, then let handler load notes
+        dd = class_dropdown_ref.current
+        if dd is not None and class_name:
+            dd.value = class_name
+        _class_handler.on_class_change(None)
     
     # Remove dynamic resize handler to prevent navigation movement
     # Navigation will now stay fixed in position regardless of content changes
@@ -125,11 +128,17 @@ def build_ui(page: ft.Page, callbacks=None):
     add_class_dialog_ref = ft.Ref[ft.AlertDialog]()
     new_class_name_ref = ft.Ref[ft.TextField]()
     
+
+    # Instantiate class handler (notes_ref will be attached later)
+    _class_handler = ClassHandler(
+        page,
+        class_dropdown_ref=class_dropdown_ref,
+        add_class_dialog_ref=add_class_dialog_ref,
+        new_class_name_ref=new_class_name_ref,
+        notes_ref=None,
+    )
     def on_class_change(e):
-        """Handle class selection change - UI ONLY"""
-        # TODO: Wire in main.py to call appropriate class manager
-        pass
-    
+        _class_handler.on_class_change(e)
     class_dropdown = ft.Dropdown(
         ref=class_dropdown_ref,
         width=150,
@@ -142,51 +151,11 @@ def build_ui(page: ft.Page, callbacks=None):
     )
     
     def close_add_class_dialog(e):
-        add_class_dialog_ref.current.open = False
-        new_class_name_ref.current.value = ""
-        page.update()
-    
+        _class_handler.close_add_class_dialog(e)
     def add_new_class(e):
-        """Add a new class"""
-        class_name = new_class_name_ref.current.value.strip()
-        if class_name and class_name not in current_classes["classes"]:
-            # Add to classes list
-            current_classes["classes"].append(class_name)
-            class_data[class_name] = {"notes": "", "transcriptions": [], "ai_history": []}
-            
-            # Update dropdown options
-            class_dropdown_ref.current.options = [
-                ft.dropdown.Option(cls) for cls in current_classes["classes"]
-            ]
-            
-            # Switch to new class
-            save_current_class_data()
-            current_classes["selected"] = class_name
-            class_dropdown_ref.current.value = class_name
-            load_class_data(class_name)
-            
-            # Close dialog and show success message
-            add_class_dialog_ref.current.open = False
-            new_class_name_ref.current.value = ""
-            page.snack_bar = ft.SnackBar(ft.Text(f"✅ Added new class: {class_name}"))
-            page.snack_bar.open = True
-            page.update()
-        elif class_name in current_classes["classes"]:
-            # Show error but don't close dialog
-            page.snack_bar = ft.SnackBar(ft.Text("⚠️ Class already exists!"))
-            page.snack_bar.open = True
-            page.update()
-        elif not class_name:
-            # Show error for empty name but don't close dialog
-            page.snack_bar = ft.SnackBar(ft.Text("⚠️ Please enter a class name!"))
-            page.snack_bar.open = True
-            page.update()
-    
+        _class_handler.add_new_class(e)
     def open_add_class_dialog(e):
-        new_class_name_ref.current.value = ""  # Clear the field when opening
-        add_class_dialog_ref.current.open = True
-        page.update()
-    
+        _class_handler.open_add_class_dialog(e)
     add_class_dialog = ft.AlertDialog(
         ref=add_class_dialog_ref,
         modal=True,
@@ -207,8 +176,8 @@ def build_ui(page: ft.Page, callbacks=None):
             padding=ft.padding.all(10),
         ),
         actions=[
-            ft.TextButton("Cancel", on_click=lambda e: None),  # TODO: was `close_add_class_dialog` → wire in main.py to call appropriate manager via main.py
-            ft.ElevatedButton("Add Class", on_click=lambda e: None, style=ft.ButtonStyle(bgcolor=PASTEL_PURPLE)),  # TODO: was `add_new_class` → wire in main.py to call appropriate manager via main.py
+            ft.TextButton("Cancel", on_click=close_add_class_dialog),  # TODO: was `close_add_class_dialog` → wire in main.py to call appropriate manager via main.py
+            ft.ElevatedButton("Add Class", on_click=add_new_class, style=ft.ButtonStyle(bgcolor=PASTEL_PURPLE)),  # TODO: was `add_new_class` → wire in main.py to call appropriate manager via main.py
         ],
         actions_alignment=ft.MainAxisAlignment.END,
     )
@@ -216,13 +185,15 @@ def build_ui(page: ft.Page, callbacks=None):
     add_class_btn = ft.IconButton(
         icon=ft.icons.ADD,
         tooltip="Add New Class",
-        on_click=lambda e: None,  # TODO: was `open_add_class_dialog` → wire in main.py to call appropriate manager via main.py
-        icon_color=PASTEL_PURPLE,
+        on_click=open_add_class_dialog,  # TODO: was `open_add_class_dialog` → wire in main.py to call appropriate manager via main.py
+        icon_color=WHITE,
     )
 
     # Refs & state
     nav_index = 0  # 0: Notes, 1: Transcribe, 2: AI
     notes_ref: ft.Ref[ft.TextField] = ft.Ref[ft.TextField]()
+    # Attach notes_ref to handler
+    _class_handler.notes_ref = notes_ref
     trans_live_ref: ft.Ref[ft.ListView] = ft.Ref[ft.ListView]()
     sum_output_ref: ft.Ref[ft.Text] = ft.Ref[ft.Text]()
     sum_mode_ref: ft.Ref[ft.Dropdown] = ft.Ref[ft.Dropdown]()
@@ -1124,4 +1095,3 @@ def build_ui(page: ft.Page, callbacks=None):
 
 
 # End of file
-
