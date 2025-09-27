@@ -1,105 +1,92 @@
-"""
-Transcription Handler
-Handles all audio recording and transcription functionality.
-
-TODO for team members:
-- Implement audio recording using sounddevice or pyaudio
-- Add speech-to-text with Google Speech API or Whisper
-- Implement audio playback controls
-- Add noise reduction and audio enhancement
-- Integrate with real-time transcription
-"""
-
+from app import audio
+from app.transcription import Transcriber
+from app.handlers.class_handlers import ClassHandler
+from app import summarizer
 import flet as ft
+from pathlib import Path
+import re
 from typing import Any
 
-
 class TranscriptionHandler:
-    """Handles audio recording and transcription operations"""
-    
-    def __init__(self, page: ft.Page):
+    def __init__(self, page: ft.Page, class_handler: ClassHandler):
+        """Transcription handler now uses an injected shared ClassHandler.
+
+        Args:
+            page: flet page
+            class_handler: shared ClassHandler instance (injected by ButtonManager)
+        """
         self.page = page
-        # TODO: Initialize audio devices, transcription services, etc.
+        # Use the shared class handler instead of creating a new one here
+        self.class_handler = class_handler
+        self.transcriber = Transcriber(model_size="tiny")  # load once
         self.is_recording = False
         self.current_recording = None
-        self.audio_format = "wav"  # or "mp3"
-    
-    def start_recording(self, e: Any = None):
-        """
-        Handle starting audio recording
-        
-        TODO: Implement the following:
-        1. Check microphone permissions
-        2. Initialize audio recording device
-        3. Start recording audio stream
-        4. Update UI to show recording status
-        5. Handle recording errors
-        """
-        # Placeholder implementation
+
+    def upload_audio(self, e: ft.FilePickerResultEvent):
+        """Save audio file into class folder, run Whisper, save transcript (sentence split), then summarize."""
+        if not e.files:
+            self._show_message("⚠️ No file selected", success=False)
+            return
+
+        file = e.files[0]
+        class_name = self.class_handler.get_current_class()
+
+        try:
+            # 1. Save audio file
+            saved_audio = audio.save_audio_file(file.path, file.name, class_name)
+
+            # 2. Transcribe with Whisper
+            text = self.transcriber.transcribe_file(saved_audio)
+
+            # 2.5. Format for readability (split by punctuation)
+            sentences = re.split(r'(?<=[.!?]) +', text)
+            text = "\n".join(sentences)
+
+            # 3. Save transcript alongside audio
+            class_dir = Path("data/classes") / class_name / "transcripts"
+            class_dir.mkdir(parents=True, exist_ok=True)
+            transcript_path = class_dir / (Path(file.name).stem + ".txt")
+            with open(transcript_path, "w", encoding="utf-8") as f:
+                f.write(text)
+
+            self._show_message(f"✅ Saved transcript: {transcript_path.name}")
+            print(f"[INFO] Transcript saved to {transcript_path}")
+
+            # 4. Summarize transcript into summaries folder
+            try:
+                summary_path = summarizer.summarize_file(
+                    transcript_path,  # input transcript
+                    None,             # output ignored (summarizer builds metadata filename)
+                    class_name=class_name
+                )
+                self._show_message(f"📄 Summary generated: {Path(summary_path).name}")
+                print(f"[INFO] Summary saved to {summary_path}")
+            except Exception as err:
+                self._show_message(f"⚠️ Summarization failed: {err}", success=False)
+
+        except Exception as err:
+            self._show_message(f"❌ Error: {err}", success=False)
+
+    # ------------------------
+    # Stubs so UI buttons don’t break
+    # ------------------------
+
+    def start_recording(self, e: ft.ControlEvent = None):
         if not self.is_recording:
             self.is_recording = True
-            self._show_message("🎤 Recording started - Ready for implementation!")
-            
-            # Example implementation structure:
-            # if self._check_microphone_permission():
-            #     self._initialize_audio_device()
-            #     self.current_recording = self._start_audio_stream()
-            #     self._update_recording_ui(recording=True)
-            #     self._show_message("🔴 Recording started")
-            # else:
-            #     self._show_message("❌ Microphone permission required", success=False)
+            self._show_message("🎤 Start recording (stub) - not yet implemented")
         else:
-            self._show_message("⚠️ Already recording!", success=False)
-    
-    def stop_recording(self, e: Any = None):
-        """
-        Handle stopping audio recording
-        
-        TODO: Implement the following:
-        1. Stop audio stream
-        2. Save recorded audio to file
-        3. Update UI to show stopped status
-        4. Prepare audio for transcription
-        5. Clean up audio resources
-        """
-        # Placeholder implementation
+            self._show_message("⚠️ Already recording", success=False)
+
+    def stop_recording(self, e: ft.ControlEvent = None):
         if self.is_recording:
             self.is_recording = False
-            self._show_message("⏹️ Recording stopped - Ready for implementation!")
-            
-            # Example implementation:
-            # self._stop_audio_stream()
-            # audio_file = self._save_recording(self.current_recording)
-            # self._update_recording_ui(recording=False)
-            # self.current_recording = None
-            # self._show_message(f"✅ Recording saved: {audio_file}")
+            self._show_message("⏹️ Stop recording (stub) - not yet implemented")
         else:
             self._show_message("⚠️ Not currently recording!", success=False)
     
-    def transcribe_audio(self, e: Any = None):
-        """
-        Handle transcribing recorded audio to text
-        
-        TODO: Implement the following:
-        1. Get audio file from recording or file upload
-        2. Send to speech-to-text service (Google/Whisper/Azure)
-        3. Process transcription results
-        4. Display transcribed text in UI
-        5. Handle transcription errors
-        """
-        # Placeholder implementation
-        self._show_message("📝 Transcribe Audio - Ready for implementation!")
-        
-        # Example implementation:
-        # audio_file = self._get_audio_file()
-        # if audio_file:
-        #     transcription = self._call_speech_to_text_api(audio_file)
-        #     if transcription:
-        #         self._display_transcription(transcription)
-        #         self._save_transcription(transcription)
-        #         self._show_message("✅ Audio transcribed successfully")
-        #     else:
-        #         self._show_message("❌ Transcription failed", success=False)
+    # NOTE: Manual transcribe_audio method removed. Auto-transcription will be
+    # triggered automatically after upload or recording stop by future logic.
     
     def upload_audio(self, e: Any = None):
         """
@@ -153,35 +140,5 @@ class TranscriptionHandler:
         self._show_message("⏸️ Pause Audio - Ready for implementation!")
     
     def _show_message(self, message: str, success: bool = True):
-        """Helper method to show messages"""
         color = ft.colors.GREEN if success else ft.colors.RED
-        self.page.show_snack_bar(
-            ft.SnackBar(content=ft.Text(message), bgcolor=color)
-        )
-    
-    # TODO: Helper methods for team members to implement
-    # def _check_microphone_permission(self) -> bool:
-    #     """Check if microphone access is available"""
-    #     pass
-    # 
-    # def _initialize_audio_device(self):
-    #     """Initialize audio recording device"""
-    #     # Use sounddevice or pyaudio
-    #     pass
-    # 
-    # def _start_audio_stream(self):
-    #     """Start audio recording stream"""
-    #     pass
-    # 
-    # def _stop_audio_stream(self):
-    #     """Stop audio recording stream"""
-    #     pass
-    # 
-    # def _save_recording(self, audio_data) -> str:
-    #     """Save recorded audio to file"""
-    #     pass
-    # 
-    # def _call_speech_to_text_api(self, audio_file: str) -> str:
-    #     """Call speech-to-text service"""
-    #     # Options: Google Speech API, OpenAI Whisper, Azure Speech
-    #     pass
+        self.page.show_snack_bar(ft.SnackBar(content=ft.Text(message), bgcolor=color))

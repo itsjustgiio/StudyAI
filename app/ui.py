@@ -20,6 +20,18 @@ from __future__ import annotations
 import asyncio
 import flet as ft
 
+from .landing_page import create_landing_page
+from pathlib import Path
+
+
+# ============================================================================
+# UI CONSTANTS
+# ============================================================================
+
+# Default content height for all main areas
+# At runtime we compute a responsive `content_height` (sticky) based on the page
+# window height so content areas shrink/expand when the app is resized.
+DEFAULT_CONTENT_HEIGHT = 675  # Fallback fixed height for content areas
 
 # ============================================================================
 # STUB FUNCTIONS - UI PLACEHOLDERS ONLY
@@ -48,7 +60,9 @@ async def stub_start_transcription(callback):
 
 async def stub_stop_transcription():
     """UI PLACEHOLDER - Replace with app/transcription.py integration"""
-    return None
+    pass
+
+
 
 
 # ----------------------------
@@ -57,31 +71,97 @@ async def stub_stop_transcription():
 # Your main.py should do:  ft.app(build_ui)
 # ----------------------------
 
-def build_ui(page: ft.Page, callbacks=None):
+def build_ui(page: ft.Page, callbacks: dict | None = None):
     """Build UI with optional button callbacks from ButtonManager"""
     if callbacks is None:
         callbacks = {}  # Fallback to empty dict if no callbacks provided
     
     page.title = "StudyAI"
     page.theme_mode = ft.ThemeMode.LIGHT
-    page.window_width = 1200
-    page.window_height = 900  # Increased height for larger notes area
+    page.window_width = 1400  # Larger default width
+    page.window_height = 1000  # Larger default height
     page.window_min_width = 1000
-    page.window_min_height = 700  # Increased minimum height
-    page.scroll = ft.ScrollMode.AUTO
-    page.padding = 0
+    page.window_min_height = 700
+    page.window_maximized = True  # Start maximized for full screen experience
+    page.spacing = 0  # Remove any default spacing
+    page.padding = 0  # Remove any default padding
+    page.scroll = None  # Remove scroll to enable full vertical expansion
+    page.auto_scroll = False  # Disable auto scroll for full control  
+    page.vertical_alignment = ft.MainAxisAlignment.START  # Align content to top
+    # Responsive (sticky) content height: compute from window height
+    # Use a sensible minimum so small windows don't collapse the UI.
+    content_height = max(300, int(page.window_height * 0.65)) if page.window_height else DEFAULT_CONTENT_HEIGHT
+
+    # Refs for containers whose height should follow `content_height`
+    notes_content_ref: ft.Ref[ft.Container] = ft.Ref[ft.Container]()
+    trans_content_ref: ft.Ref[ft.Container] = ft.Ref[ft.Container]()
+    ai_content_ref: ft.Ref[ft.Container] = ft.Ref[ft.Container]()
+
+    def _on_resize(e=None):
+        """Recompute content_height and apply to main content containers."""
+        nonlocal content_height
+        try:
+            content_height = max(300, int(page.window_height * 0.65))
+        except Exception:
+            content_height = DEFAULT_CONTENT_HEIGHT
+
+        if notes_content_ref.current is not None:
+            notes_content_ref.current.height = content_height
+        if trans_content_ref.current is not None:
+            trans_content_ref.current.height = content_height
+        if ai_content_ref.current is not None:
+            ai_content_ref.current.height = content_height
+
+        try:
+            page.update()
+        except Exception:
+            pass
+
+    # Attach handler so Flet calls it on resize events
+    page.on_resize = _on_resize
     
-    # Class management system
-    current_classes = {"classes": ["General"], "selected": "General"}
-    class_data = {"General": {"notes": "", "transcriptions": [], "ai_history": []}}
+    # App state
+    app_state = {"show_landing": True}
     
-    def save_current_class_data():
-        """Save current content to the selected class - UI ONLY"""
+    # Main container that switches between landing and app
+    main_container = ft.Container(expand=True)
+    
+    # Navigation functions (defined early so they can be used in app bar)
+    def enter_main_app(e=None):
+        """Navigate from landing page to main application"""
+        app_state["show_landing"] = False
+        # App bar and content will be set after they're defined
+        page.update()
+    
+    def return_to_landing(e=None):
+        """Navigate back to landing page from main app"""
+        app_state["show_landing"] = True
+        page.appbar = None  # Hide app bar
+        main_container.content = create_landing_page(page, enter_main_app)
+        page.update()
+    
+    # Tree-based class management system
+    class_tree_data = {
+        "type": "root",  
+        "children": {
+            "General": {
+                "type": "folder",
+                "expanded": True,
+                "children": {
+                    "My Notes": {"type": "note", "notes": "", "transcriptions": [], "ai_history": []}
+                }
+            }
+        }
+    }
+    current_selection = {"path": ["General", "My Notes"], "type": "note"}
+    
+    def save_current_data():
+        """Save current content to the selected item - UI ONLY"""
         # TODO: Wire in main.py to call appropriate class manager
         pass
     
-    def load_class_data(class_name):
-        """Load data for the selected class - UI ONLY"""
+    def load_data(path):
+        """Load data for the selected item - UI ONLY"""
         # TODO: Wire in main.py to call appropriate class manager
         pass
     
@@ -96,109 +176,250 @@ def build_ui(page: ft.Page, callbacks=None):
     LIGHT_GRAY = "#F8F6FA"         # Very light gray with purple tint
     TEXT_DARK = "#4A4A4A"          # Dark gray for text
 
-    # Class management UI components
-    class_dropdown_ref = ft.Ref[ft.Dropdown]()
-    add_class_dialog_ref = ft.Ref[ft.AlertDialog]()
-    new_class_name_ref = ft.Ref[ft.TextField]()
+    # Tree-based class management UI components
+    tree_container_ref = ft.Ref[ft.Column]()
+    add_folder_dialog_ref = ft.Ref[ft.AlertDialog]()
+    add_note_dialog_ref = ft.Ref[ft.AlertDialog]()
+    new_folder_name_ref = ft.Ref[ft.TextField]()
+    new_note_name_ref = ft.Ref[ft.TextField]()
     
-    def on_class_change(e):
-        """Handle class selection change - UI ONLY"""
-        # TODO: Wire in main.py to call appropriate class manager
-        pass
+    def get_item_at_path(tree_data, path):
+        """Navigate to item at given path in tree"""
+        current = tree_data
+        for part in path:
+            if "children" in current and part in current["children"]:
+                current = current["children"][part]
+            else:
+                return None
+        return current
     
-    class_dropdown = ft.Dropdown(
-        ref=class_dropdown_ref,
-        width=150,
-        value="General",
-        options=[ft.dropdown.Option("General")],
-        on_change=on_class_change,
-        text_style=ft.TextStyle(size=14, color=ft.colors.BLACK),
-        bgcolor=WHITE,
-        color=ft.colors.BLACK,  # Text color for selected value
-    )
+    def on_tree_item_click(path, item_type):
+        """Handle tree item selection"""
+        def handler(e):
+            current_selection["path"] = path.copy()
+            current_selection["type"] = item_type
+            save_current_data()
+            load_data(path)
+            build_tree_ui()  # Refresh tree to show selection
+            page.update()
+        return handler
     
-    def close_add_class_dialog(e):
-        add_class_dialog_ref.current.open = False
-        new_class_name_ref.current.value = ""
-        page.update()
+    def toggle_folder(path):
+        """Toggle folder expanded/collapsed state"""
+        def handler(e):
+            item = get_item_at_path(class_tree_data, path)
+            if item and item["type"] == "folder":
+                item["expanded"] = not item.get("expanded", False)
+                build_tree_ui()  # Refresh tree
+                page.update()
+        return handler
     
-    def add_new_class(e):
-        """Add a new class"""
-        class_name = new_class_name_ref.current.value.strip()
-        if class_name and class_name not in current_classes["classes"]:
-            # Add to classes list
-            current_classes["classes"].append(class_name)
-            class_data[class_name] = {"notes": "", "transcriptions": [], "ai_history": []}
+    def build_tree_ui():
+        """Build the tree UI recursively"""
+        def build_tree_items(data, path=[]):
+            items = []
+            if "children" in data:
+                for name, item in data["children"].items():
+                    current_path = path + [name]
+                    is_selected = current_selection["path"] == current_path
+                    
+                    if item["type"] == "folder":
+                        # Folder row with expand/collapse and selection
+                        folder_row = ft.Row([
+                            ft.IconButton(
+                                icon=ft.icons.KEYBOARD_ARROW_DOWN if item.get("expanded", False) else ft.icons.KEYBOARD_ARROW_RIGHT,
+                                icon_size=16,
+                                on_click=toggle_folder(current_path),
+                                icon_color=PASTEL_PURPLE,
+                            ),
+                            ft.IconButton(
+                                icon=ft.icons.FOLDER_OPEN if item.get("expanded", False) else ft.icons.FOLDER,
+                                icon_size=16,
+                                on_click=on_tree_item_click(current_path, "folder"),
+                                icon_color=PASTEL_PURPLE if is_selected else TEXT_DARK,
+                            ),
+                            ft.Text(
+                                name, 
+                                size=14, 
+                                weight=ft.FontWeight.BOLD if is_selected else ft.FontWeight.NORMAL,
+                                color=PASTEL_PURPLE if is_selected else TEXT_DARK
+                            ),
+                        ], spacing=2, alignment=ft.MainAxisAlignment.START)
+                        
+                        items.append(ft.Container(
+                            folder_row,
+                            bgcolor=SOFT_PURPLE if is_selected else ft.colors.TRANSPARENT,
+                            border_radius=4,
+                            padding=ft.padding.only(left=len(path)*16)
+                        ))
+                        
+                        # Add children if expanded
+                        if item.get("expanded", False):
+                            items.extend(build_tree_items(item, current_path))
+                    
+                    elif item["type"] == "note":
+                        # Note row
+                        note_row = ft.Row([
+                            ft.Container(width=18),  # Spacing for alignment
+                            ft.Icon(ft.icons.DESCRIPTION, size=16, color=DARK_PURPLE if is_selected else TEXT_DARK),
+                            ft.Text(
+                                name, 
+                                size=13,
+                                weight=ft.FontWeight.BOLD if is_selected else ft.FontWeight.NORMAL,
+                                color=DARK_PURPLE if is_selected else TEXT_DARK
+                            ),
+                        ], spacing=6, alignment=ft.MainAxisAlignment.START)
+                        
+                        items.append(ft.Container(
+                            note_row,
+                            bgcolor=SOFT_PURPLE if is_selected else ft.colors.TRANSPARENT,
+                            border_radius=4,
+                            padding=ft.padding.only(left=len(path)*16 + 16),
+                            on_click=on_tree_item_click(current_path, "note")
+                        ))
             
-            # Update dropdown options
-            class_dropdown_ref.current.options = [
-                ft.dropdown.Option(cls) for cls in current_classes["classes"]
-            ]
+            return items
+        
+        tree_items = build_tree_items(class_tree_data)
+        if tree_container_ref.current:
+            tree_container_ref.current.controls = tree_items
+    
+    def add_folder_action(e):
+        """Add a new folder to the tree"""
+        folder_name = new_folder_name_ref.current.value.strip()
+        if folder_name:
+            # Add to root level for now (can be enhanced to add to selected folder)
+            class_tree_data["children"][folder_name] = {
+                "type": "folder",
+                "expanded": True,
+                "children": {}
+            }
             
-            # Switch to new class
-            save_current_class_data()
-            current_classes["selected"] = class_name
-            class_dropdown_ref.current.value = class_name
-            load_class_data(class_name)
-            
-            # Close dialog and show success message
-            add_class_dialog_ref.current.open = False
-            new_class_name_ref.current.value = ""
-            page.snack_bar = ft.SnackBar(ft.Text(f"✅ Added new class: {class_name}"))
+            add_folder_dialog_ref.current.open = False
+            new_folder_name_ref.current.value = ""
+            build_tree_ui()
+            page.snack_bar = ft.SnackBar(ft.Text(f"✅ Added folder: {folder_name}"))
             page.snack_bar.open = True
             page.update()
-        elif class_name in current_classes["classes"]:
-            # Show error but don't close dialog
-            page.snack_bar = ft.SnackBar(ft.Text("⚠️ Class already exists!"))
-            page.snack_bar.open = True
-            page.update()
-        elif not class_name:
-            # Show error for empty name but don't close dialog
-            page.snack_bar = ft.SnackBar(ft.Text("⚠️ Please enter a class name!"))
-            page.snack_bar.open = True
-            page.update()
     
-    def open_add_class_dialog(e):
-        new_class_name_ref.current.value = ""  # Clear the field when opening
-        add_class_dialog_ref.current.open = True
-        page.update()
+    def add_note_action(e):
+        """Add a new note to the selected folder"""
+        note_name = new_note_name_ref.current.value.strip()
+        if note_name:
+            # Find the selected folder or use General as default
+            selected_path = current_selection["path"]
+            if current_selection["type"] == "note" and len(selected_path) > 1:
+                # If note is selected, add to its parent folder
+                parent_path = selected_path[:-1]
+            elif current_selection["type"] == "folder":
+                # If folder is selected, add to it
+                parent_path = selected_path
+            else:
+                # Default to General folder
+                parent_path = ["General"]
+            
+            parent_item = get_item_at_path(class_tree_data, parent_path)
+            if parent_item and parent_item["type"] == "folder":
+                parent_item["children"][note_name] = {
+                    "type": "note",
+                    "notes": "",
+                    "transcriptions": [],
+                    "ai_history": []
+                }
+                parent_item["expanded"] = True  # Expand to show new note
+                
+                add_note_dialog_ref.current.open = False
+                new_note_name_ref.current.value = ""
+                build_tree_ui()
+                page.snack_bar = ft.SnackBar(ft.Text(f"✅ Added note: {note_name}"))
+                page.snack_bar.open = True
+                page.update()
     
-    add_class_dialog = ft.AlertDialog(
-        ref=add_class_dialog_ref,
+    # Dialog for adding folders
+    add_folder_dialog = ft.AlertDialog(
+        ref=add_folder_dialog_ref,
         modal=True,
-        title=ft.Text("📚 Add New Class"),
+        title=ft.Text("� Add New Folder"),
         content=ft.Container(
             ft.Column([
-                ft.Text("Enter the name of your new class:", size=14),
+                ft.Text("Enter the folder name:", size=14),
                 ft.TextField(
-                    ref=new_class_name_ref,
-                    hint_text="e.g., Computer Science 101",
+                    ref=new_folder_name_ref,
+                    hint_text="e.g., Computer Science",
                     autofocus=True,
-                    on_submit=add_new_class,
+                    on_submit=add_folder_action,
                     width=280,
                 ),
             ], spacing=15, tight=True),
             width=300,
-            height=120,  # Fixed compact height
+            height=120,
             padding=ft.padding.all(10),
         ),
         actions=[
-            ft.TextButton("Cancel", on_click=lambda e: None),  # TODO: was `close_add_class_dialog` → wire in main.py to call appropriate manager via main.py
-            ft.ElevatedButton("Add Class", on_click=lambda e: None, style=ft.ButtonStyle(bgcolor=PASTEL_PURPLE)),  # TODO: was `add_new_class` → wire in main.py to call appropriate manager via main.py
+            ft.TextButton("Cancel", on_click=lambda e: setattr(add_folder_dialog_ref.current, 'open', False) or page.update()),
+            ft.ElevatedButton("Add Folder", on_click=add_folder_action, style=ft.ButtonStyle(bgcolor=PASTEL_PURPLE)),
         ],
         actions_alignment=ft.MainAxisAlignment.END,
     )
     
-    add_class_btn = ft.IconButton(
-        icon=ft.icons.ADD,
-        tooltip="Add New Class",
-        on_click=lambda e: None,  # TODO: was `open_add_class_dialog` → wire in main.py to call appropriate manager via main.py
-        icon_color=WHITE,
+    # Dialog for adding notes
+    add_note_dialog = ft.AlertDialog(
+        ref=add_note_dialog_ref,
+        modal=True,
+        title=ft.Text("📄 Add New Note"),
+        content=ft.Container(
+            ft.Column([
+                ft.Text("Enter the note name:", size=14),
+                ft.TextField(
+                    ref=new_note_name_ref,
+                    hint_text="e.g., Lecture 1 Notes",
+                    autofocus=True,
+                    on_submit=add_note_action,
+                    width=280,
+                ),
+            ], spacing=15, tight=True),
+            width=300,
+            height=120,
+            padding=ft.padding.all(10),
+        ),
+        actions=[
+            ft.TextButton("Cancel", on_click=lambda e: setattr(add_note_dialog_ref.current, 'open', False) or page.update()),
+            ft.ElevatedButton("Add Note", on_click=add_note_action, style=ft.ButtonStyle(bgcolor=DARK_PURPLE)),
+        ],
+        actions_alignment=ft.MainAxisAlignment.END,
+    )
+    
+    # Tree container
+    tree_container = ft.Column(ref=tree_container_ref, spacing=2, tight=True)
+    
+    # Action buttons
+    add_folder_btn = ft.ElevatedButton(
+        content=ft.Row([
+            ft.Icon(ft.icons.CREATE_NEW_FOLDER, size=16),
+            ft.Text("Add Folder", size=12)
+        ], spacing=4, tight=True),
+        on_click=lambda e: setattr(add_folder_dialog_ref.current, 'open', True) or page.update(),
+        style=ft.ButtonStyle(bgcolor=PASTEL_PURPLE, color=WHITE),
+        height=32,
+        width=120,
+    )
+    
+    add_note_btn = ft.ElevatedButton(
+        content=ft.Row([
+            ft.Icon(ft.icons.NOTE_ADD, size=16),
+            ft.Text("Add Note", size=12)
+        ], spacing=4, tight=True),
+        on_click=lambda e: setattr(add_note_dialog_ref.current, 'open', True) or page.update(),
+        style=ft.ButtonStyle(bgcolor=DARK_PURPLE, color=WHITE),
+        height=32,
+        width=120,
     )
 
     # Refs & state
     nav_index = 0  # 0: Notes, 1: Transcribe, 2: AI
     notes_ref: ft.Ref[ft.TextField] = ft.Ref[ft.TextField]()
+    # Attach notes_ref to handler
+        # Notes reference handled by ButtonManager in main.py
     trans_live_ref: ft.Ref[ft.ListView] = ft.Ref[ft.ListView]()
     sum_output_ref: ft.Ref[ft.Text] = ft.Ref[ft.Text]()
     sum_mode_ref: ft.Ref[ft.Dropdown] = ft.Ref[ft.Dropdown]()
@@ -219,16 +440,20 @@ def build_ui(page: ft.Page, callbacks=None):
         on_click=callbacks.get('connect_drive', lambda e: None),
     )
 
+    # Back to Landing button
+    back_to_landing_btn = ft.IconButton(
+        icon=ft.icons.HOME,
+        tooltip="Back to Landing Page",
+        on_click=return_to_landing,
+        icon_color=WHITE,
+    )
+    
     app_bar = ft.AppBar(
         title=ft.Text("StudyAI", size=24, weight=ft.FontWeight.BOLD),
         center_title=False,
         bgcolor=PASTEL_PURPLE,
         color=WHITE,
         actions=[
-            ft.Text("Class:", size=14, color=WHITE),
-            class_dropdown,
-            add_class_btn,
-            ft.Container(width=10),  # Small spacer
             google_drive_btn,
         ],
     )
@@ -243,71 +468,129 @@ def build_ui(page: ft.Page, callbacks=None):
     # Create custom navigation buttons instead of NavigationRail
     current_nav = {"selected": 0}
     
+    # Navigation handler will be defined after all views are created
     def nav_button_click(index):
         """Navigation button click handler - FUNCTIONAL"""
         def handler(_):
             current_nav["selected"] = index
-            if index == 0:
-                main_content.content = ft.Container(notes_view, expand=True, padding=ft.padding.all(10))
-            elif index == 1:
-                main_content.content = ft.Container(trans_view, expand=True, padding=ft.padding.all(10))
-            else:
-                main_content.content = ft.Container(ai_view, expand=True, padding=ft.padding.all(10))
-            
-            # Update button styles
-            for i, btn in enumerate(nav_buttons):
-                btn.style = ft.ButtonStyle(
-                    bgcolor=PASTEL_PURPLE if i == index else ft.colors.SURFACE_VARIANT,
-                    color=ft.colors.ON_PRIMARY if i == index else ft.colors.ON_SURFACE,
-                )
+            # Views will be referenced after they're defined
             page.update()
         return handler
     
+    # Top navigation bar buttons - horizontal layout
     nav_buttons = [
         ft.ElevatedButton(
             content=ft.Row([
-                ft.Icon(ft.icons.NOTE_ALT),
-                ft.Text("Notes", weight=ft.FontWeight.W_500)
-            ], spacing=8),
+                ft.Icon(ft.icons.NOTE_ALT, size=18),
+                ft.Text("Notes", weight=ft.FontWeight.W_500, size=14)
+            ], spacing=6),
             on_click=nav_button_click(0),
             style=ft.ButtonStyle(
                 bgcolor=PASTEL_PURPLE,
                 color=ft.colors.ON_PRIMARY,
             ),
-            width=160,
+            height=40,
         ),
         ft.ElevatedButton(
             content=ft.Row([
-                ft.Icon(ft.icons.MIC),
-                ft.Text("Transcribe", weight=ft.FontWeight.W_500)
-            ], spacing=8),
+                ft.Icon(ft.icons.MIC, size=18),
+                ft.Text("Transcribe", weight=ft.FontWeight.W_500, size=14)
+            ], spacing=6),
             on_click=nav_button_click(1),
             style=ft.ButtonStyle(
                 bgcolor=ft.colors.SURFACE_VARIANT,
                 color=ft.colors.ON_SURFACE,
             ),
-            width=160,
+            height=40,
         ),
         ft.ElevatedButton(
             content=ft.Row([
-                ft.Icon(ft.icons.SMART_TOY),
-                ft.Text("AI Assistant", weight=ft.FontWeight.W_500)
-            ], spacing=8),
+                ft.Icon(ft.icons.SMART_TOY, size=18),
+                ft.Text("AI Assistant", weight=ft.FontWeight.W_500, size=14)
+            ], spacing=6),
             on_click=nav_button_click(2),
             style=ft.ButtonStyle(
                 bgcolor=ft.colors.SURFACE_VARIANT,
                 color=ft.colors.ON_SURFACE,
             ),
-            width=160,
+            height=40,
         ),
     ]
     
-    nav = ft.Column(
-        nav_buttons,
-        spacing=10,
-        alignment=ft.MainAxisAlignment.START,  # Start from top, we'll position with container
-        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-        tight=True,  # Don't expand, keep compact
+    # Mode tabs (moved to content column)
+    mode_tabs = ft.Container(
+        content=ft.Row(
+            nav_buttons,
+            spacing=10,
+            alignment=ft.MainAxisAlignment.START,
+        ),
+        bgcolor=WHITE,
+        padding=ft.padding.only(top=12, bottom=12),  # No left/right padding, inherits from parent
+        border=ft.border.only(bottom=ft.BorderSide(2, PASTEL_PURPLE)),
+        height=64,
+        margin=ft.margin.all(0),  # Ensure no stray margins
+    )
+    
+    # Purple divider between sidebar and content
+    divider = ft.Container(
+        width=2,
+        bgcolor=PASTEL_PURPLE,
+    )
+    
+    # Left sidebar with Home button and Class section
+    back_to_landing_nav_btn = ft.ElevatedButton(
+        content=ft.Row([
+            ft.Icon(ft.icons.HOME, size=18),
+            ft.Text("Home", weight=ft.FontWeight.W_500, size=14)
+        ], spacing=6),
+        on_click=return_to_landing,
+        style=ft.ButtonStyle(
+            bgcolor=PASTEL_PURPLE,
+            color=ft.colors.ON_PRIMARY,
+        ),
+        width=220,
+        height=40,
+    )
+    
+    # Sidebar column content
+    sidebar_column = ft.Column([
+        ft.Container(
+            back_to_landing_nav_btn,
+            padding=ft.padding.only(top=12, bottom=12),
+        ),
+        ft.Divider(color=PASTEL_PURPLE, height=1),
+        ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Text("Classes & Notes", size=14, color=TEXT_DARK, weight=ft.FontWeight.BOLD),
+                ], alignment=ft.MainAxisAlignment.START),
+                ft.Container(height=8),
+                ft.Row([
+                    add_folder_btn,
+                    add_note_btn,
+                ], spacing=6, alignment=ft.MainAxisAlignment.START),
+                ft.Container(height=8),
+                ft.Container(
+                    tree_container,
+                    height=300,  # Fixed height for scrollable tree
+                    bgcolor=WHITE,
+                    border_radius=8,
+                    border=ft.border.all(1, PASTEL_PURPLE),
+                    padding=ft.padding.all(8),
+                ),
+            ], spacing=0, tight=True),
+            padding=ft.padding.only(top=0, bottom=12),
+        ),
+    ], spacing=0, tight=True)
+    
+    # Sidebar container with specified structure
+    sidebar = ft.Container(
+        width=280,
+        alignment=ft.alignment.top_left,
+        padding=ft.padding.only(left=12, right=12),
+        content=sidebar_column,
+        bgcolor=LIGHT_GRAY,
+        margin=ft.margin.all(0),  # Remove stray margins
     )
 
     # Document upload functionality
@@ -359,21 +642,64 @@ def build_ui(page: ft.Page, callbacks=None):
         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
     )
 
+    # State for notes guidance visibility
+    notes_guidance_visible = {"visible": True}
+    
+    # Guidance text container reference (not just the text)
+    notes_guidance_container_ref = ft.Ref[ft.Container]()
+    
+    def on_notes_change(e):
+        """Handle notes text change to hide/show guidance"""
+        if notes_ref.current and notes_guidance_container_ref.current:
+            has_text = bool(notes_ref.current.value and notes_ref.current.value.strip())
+            notes_guidance_container_ref.current.visible = not has_text
+            notes_guidance_visible["visible"] = not has_text
+            page.update()
+    
     notes_editor = ft.TextField(
         ref=notes_ref,
         multiline=True,
-        min_lines=1,  # Allow natural expansion within fixed container
+        min_lines=50,  # Allow natural expansion within fixed container
         max_lines=None,  # No line limit - container height controls size
         expand=True,
-        hint_text="Type your lecture notes here...\n\nTips:\n• Use bullet points for key concepts\n• Organize thoughts clearly\n• The AI will analyze this content",
-        hint_style=ft.TextStyle(color=ft.colors.OUTLINE),
         border=ft.InputBorder.NONE,  # Remove border to prevent double borders
         content_padding=ft.padding.all(8),  # Minimal padding to fit within container
         text_size=14,
         bgcolor=ft.colors.TRANSPARENT,  # Make background transparent
         width=None,  # Let container control width
         height=None,  # Let container control height
+        on_change=on_notes_change,  # Add change handler
     )
+    
+    # Guidance text overlay - must match TextField positioning exactly
+    notes_guidance = ft.Text(
+        value="Type your lecture notes here...\n\nTips:\n• Use bullet points for key concepts\n• Organize thoughts clearly\n• The AI will analyze this content",
+        size=14,  # Match TextField text_size exactly
+        color=ft.colors.OUTLINE,
+        font_family=None,  # Use default font like TextField
+        weight=ft.FontWeight.NORMAL,  # Match TextField font weight
+        selectable=False,  # Make it non-selectable so it doesn't interfere
+        text_align=ft.TextAlign.LEFT,  # Ensure left alignment like TextField
+    )
+    
+    # Guidance container positioned to match TextField's actual text cursor position
+    notes_guidance_container = ft.Container(
+        ref=notes_guidance_container_ref,
+        content=notes_guidance,
+        padding=ft.padding.only(left=8, right=8, top=21, bottom=8),  # Add extra top padding to align with cursor
+        alignment=ft.alignment.top_left,  # Top-left alignment to match TextField
+        disabled=True,  # Make it non-interactive so clicks pass through
+        visible=True,  # Initially visible
+        expand=True,  # Match TextField expand behavior
+    )
+    
+    # Stack to overlay guidance text under textfield - both elements fill the same space
+    notes_editor_stack = ft.Stack([
+        # Guidance text positioned behind the textfield
+        notes_guidance_container,
+        # TextField on top to receive all user interaction
+        notes_editor,
+    ])
 
     notes_view = ft.Container(
         ft.Column([
@@ -383,29 +709,17 @@ def build_ui(page: ft.Page, callbacks=None):
                 padding=ft.padding.only(bottom=15),
                 height=60,  # Fixed header height matching other tabs
             ),
-            # Main content area - fixed height for consistency
+                        # Main content area - expands to fill all available space  
             ft.Container(
-                notes_editor,
-                height=500,  # Fixed height to fit properly within border
+                notes_editor_stack,
+                expand=True,  # Dynamic scaling with user's screen size
                 padding=ft.padding.all(8),  # Internal padding between border and textbox
                 border=ft.border.all(2, PASTEL_PURPLE),
                 border_radius=12,
                 bgcolor=WHITE,
             ),
             # Status area - consistent with other tabs
-            ft.Container(
-                ft.Row([
-                    ft.Icon(ft.icons.INFO_OUTLINE, size=16, color=PASTEL_PURPLE),
-                    ft.Text("💡 Tip: Use bullet points and clear headings for better AI analysis", 
-                           size=12, color=ft.colors.ON_SURFACE, italic=True),
-                ], spacing=8),
-                padding=ft.padding.all(10),
-                height=40,  # Fixed tip area height
-                border_radius=8,
-                bgcolor=ft.colors.SURFACE_VARIANT,
-                margin=ft.margin.only(top=15),
-            ),
-        ], spacing=0),
+        ], spacing=0, expand=True),  # Allow inner containers to expand
         expand=True,
         border=ft.border.all(2, PASTEL_PURPLE),
         border_radius=12,
@@ -462,8 +776,7 @@ def build_ui(page: ft.Page, callbacks=None):
     stop_btn = ft.OutlinedButton(
         "Stop Recording", 
         icon=ft.icons.STOP, 
-        on_click=lambda e: None,  # TODO: was `stop_trans` → wire in main.py to call app/transcription.py (start/stop streaming, captions)
-        disabled=True,
+        on_click=callbacks.get('stop_recording', lambda e: None),
         style=ft.ButtonStyle(
             bgcolor=DARK_PURPLE,
             color=ft.colors.ON_PRIMARY,
@@ -471,10 +784,9 @@ def build_ui(page: ft.Page, callbacks=None):
     )
 
     trans_controls = ft.Row([
-        start_btn, 
+        start_btn,
         stop_btn,
         ft.Container(expand=True),
-        ft.Text("💡 Demo: Will show sample transcription", size=12, italic=True)
     ], spacing=10)
 
     trans_live = ft.ListView(
@@ -487,7 +799,7 @@ def build_ui(page: ft.Page, callbacks=None):
 
     # Audio upload section
     file_picker = ft.FilePicker(
-        on_result=lambda e: handle_audio_upload(e.files[0] if e.files else None)
+        on_result=lambda e: callbacks.get("upload_audio", lambda ev: None)(e)
     )
     
     # Model size dropdown
@@ -510,12 +822,12 @@ def build_ui(page: ft.Page, callbacks=None):
         content_padding=ft.padding.all(10),
         text_style=ft.TextStyle(size=14),
         border_radius=8,
+        on_change=callbacks.get('model_change', lambda e: None),
     )
     
     upload_status_ref = ft.Ref[ft.Text]()
     upload_status = ft.Text(
         ref=upload_status_ref,
-        value="No file selected",
         size=12,
         color=ft.colors.ON_SURFACE,
     )
@@ -530,23 +842,12 @@ def build_ui(page: ft.Page, callbacks=None):
         )
     )
     
-    transcribe_btn = ft.ElevatedButton(
-        "Transcribe Audio",
-        icon=ft.icons.TRANSCRIBE,
-        on_click=lambda e: None,  # TODO: was `transcribe_audio_file` → wire in main.py to call app/transcription.py (start/stop streaming, captions)
-        disabled=True,
-        style=ft.ButtonStyle(
-            bgcolor=DARK_PURPLE,
-            color=ft.colors.ON_PRIMARY,
-        )
-    )
     
     upload_controls = ft.Column([
         ft.Row([
             upload_btn,
             model_size_dropdown,
             ft.Container(expand=True),
-            transcribe_btn,
         ], spacing=10),
         ft.Container(upload_status, padding=ft.padding.only(top=8)),
     ], spacing=8)
@@ -558,6 +859,93 @@ def build_ui(page: ft.Page, callbacks=None):
         padding=ft.padding.all(12),
     )
 
+    # Live Transcription tab content
+    live_transcription_tab = ft.Column([
+        # Header row with inline controls
+        ft.Container(
+            ft.Row([
+                ft.Row([
+                    ft.Icon(ft.icons.MIC, color=PASTEL_PURPLE, size=20),
+                    ft.Text("Live Transcription", size=16, weight=ft.FontWeight.BOLD),
+                ], spacing=8),
+                ft.Container(expand=True),
+                start_btn,
+                stop_btn,
+            ], spacing=10, alignment=ft.MainAxisAlignment.START),
+            padding=ft.padding.all(16),
+            height=60,
+        ),
+        ft.Container(height=8),
+        # Transcription output section
+        ft.Container(
+            ft.Column([
+                ft.Row([
+                    ft.Icon(ft.icons.SUBTITLES, color=PASTEL_PURPLE, size=16),
+                    ft.Text("Live Transcription Output:", weight=ft.FontWeight.W_500),
+                ], spacing=8),
+                ft.Container(height=8),
+                ft.Container(
+                    trans_live,
+                    expand=True,
+                    border=ft.border.all(1, PASTEL_PURPLE),
+                    border_radius=8,
+                    bgcolor=WHITE,
+                ),
+            ]),
+            padding=ft.padding.all(12),
+            expand=True,
+        ),
+    ], spacing=0)
+
+    # Audio File Upload tab content
+    audio_upload_tab = ft.Column([
+        # Controls section
+        ft.Container(
+            ft.Column([
+                ft.Row([
+                    ft.Icon(ft.icons.UPLOAD_FILE, color=PASTEL_PURPLE, size=20),
+                    ft.Text("Audio File Upload", size=16, weight=ft.FontWeight.BOLD),
+                ], spacing=8),
+                ft.Text("Upload audio files for batch transcription processing", size=12, color=ft.colors.OUTLINE),
+                ft.Container(height=10),
+                ft.Container(upload_controls, height=80),
+            ]),
+            padding=ft.padding.all(16),
+            height=130,
+        ),
+        ft.Container(height=15),
+        # Upload results section
+        ft.Container(
+            ft.Column([
+                ft.Row([
+                    ft.Icon(ft.icons.LIST_ALT, color=PASTEL_PURPLE, size=16),
+                    ft.Text("Transcription Results:", weight=ft.FontWeight.W_500),
+                ], spacing=8),
+                ft.Container(height=8),
+                ft.Container(
+                    upload_results,
+                    expand=True,
+                    border=ft.border.all(1, PASTEL_PURPLE),
+                    border_radius=8,
+                    bgcolor=WHITE,
+                ),
+            ]),
+            padding=ft.padding.all(12),
+            expand=True,
+        ),
+    ], spacing=0)
+
+    # Transcription tabs
+    transcription_tabs = ft.Tabs(
+        tabs=[
+            ft.Tab(text="🎙️ Live Recording", content=live_transcription_tab),
+            ft.Tab(text="📁 File Upload", content=audio_upload_tab),
+        ],
+        selected_index=0,
+        expand=True,
+        tab_alignment=ft.TabAlignment.START,
+    )
+
     # Uniform transcription view - standardized to match other tabs
     trans_view = ft.Container(
         ft.Column([
@@ -567,87 +955,22 @@ def build_ui(page: ft.Page, callbacks=None):
                 padding=ft.padding.only(bottom=15),
                 height=60,  # Fixed header height matching other tabs
             ),
-            # Main content area - fixed height for consistency
+            # Main content area - expands to fill all available space
             ft.Container(
-                ft.Column([
-                    # Live transcription section (top half)
-                    ft.Container(
-                        ft.Column([
-                            ft.Row([
-                                ft.Icon(ft.icons.MIC, color=PASTEL_PURPLE, size=16),
-                                ft.Text("Live Transcription", size=14, weight=ft.FontWeight.BOLD, color=PASTEL_PURPLE),
-                            ], spacing=8),
-                            ft.Container(height=8),
-                            ft.Container(trans_controls, height=50),  # Compact controls
-                            ft.Container(height=8),
-                            ft.Container(
-                                trans_live,
-                                expand=True,
-                                border=ft.border.all(1, PASTEL_PURPLE),
-                                border_radius=8,
-                                bgcolor=WHITE,
-                            ),
-                        ], spacing=0),
-                        height=245,  # Increased to split evenly (245 + 5 + 245 = 495, leaving 5px for container padding)
-                        padding=ft.padding.all(12),
-                        border=ft.border.all(2, PASTEL_PURPLE),
-                        border_radius=12,
-                        bgcolor=SOFT_PURPLE,
-                    ),
-                    
-                    ft.Container(height=5),  # Minimal spacing between sections
-                    
-                    # Audio upload section (bottom half)
-                    ft.Container(
-                        ft.Column([
-                            ft.Row([
-                                ft.Icon(ft.icons.UPLOAD_FILE, color=PASTEL_PURPLE, size=16),
-                                ft.Text("Audio File Upload", size=14, weight=ft.FontWeight.BOLD, color=PASTEL_PURPLE),
-                            ], spacing=8),
-                            ft.Container(height=8),
-                            ft.Container(upload_controls, height=80),  # Upload controls
-                            ft.Container(height=8),
-                            ft.Container(
-                                upload_results,
-                                expand=True,
-                                border=ft.border.all(1, PASTEL_PURPLE),
-                                border_radius=8,
-                                bgcolor=WHITE,
-                            ),
-                        ], spacing=0),
-                        height=245,  # Same height for perfect split
-                        padding=ft.padding.all(12),
-                        border=ft.border.all(2, PASTEL_PURPLE),
-                        border_radius=12,
-                        bgcolor=SOFT_PURPLE,
-                    ),
-                ], spacing=0),
-                height=500,  # Fixed height to match other tabs
+                transcription_tabs,
+                expand=True,  # Dynamic scaling with user's screen size
                 border=ft.border.all(2, PASTEL_PURPLE),
                 border_radius=12,
                 bgcolor=WHITE,
             ),
             # Status area - consistent with other tabs
-            ft.Container(
-                ft.Row([
-                    ft.Icon(ft.icons.INFO_OUTLINE, size=16, color=PASTEL_PURPLE),
-                    ft.Text("💡 Tip: Use live recording or upload audio files for transcription", 
-                           size=12, color=ft.colors.ON_SURFACE, italic=True),
-                ], spacing=8),
-                padding=ft.padding.all(10),
-                height=40,  # Fixed tip area height
-                border_radius=8,
-                bgcolor=ft.colors.SURFACE_VARIANT,
-                margin=ft.margin.only(top=15),
-            ),
-        ], spacing=0),
+        ], spacing=0, expand=True),  # Allow inner containers to expand
         expand=True,
         border=ft.border.all(2, PASTEL_PURPLE),
         border_radius=12,
         padding=ft.padding.all(16),
         bgcolor=SOFT_PURPLE,
     )
-
     sum_mode = ft.Dropdown(
         ref=sum_mode_ref,
         width=220,
@@ -897,28 +1220,16 @@ def build_ui(page: ft.Page, callbacks=None):
                 padding=ft.padding.only(bottom=15),
                 height=60,  # Fixed header height matching other tabs
             ),
-            # Main content area - fixed height for consistency
+            # Main content area - expands to fill all available space
             ft.Container(
                 tabs,
-                height=500,  # Fixed height to match other tabs
+                expand=True,  # Dynamic scaling with user's screen size
                 border=ft.border.all(2, PASTEL_PURPLE),
                 border_radius=12,
                 bgcolor=WHITE,
             ),
             # Status area - consistent with other tabs
-            ft.Container(
-                ft.Row([
-                    ft.Icon(ft.icons.INFO_OUTLINE, size=16, color=PASTEL_PURPLE),
-                    ft.Text("💡 Tip: Use the tabs above to analyze your notes with AI tools", 
-                           size=12, color=ft.colors.ON_SURFACE, italic=True),
-                ], spacing=8),
-                padding=ft.padding.all(10),
-                height=40,  # Fixed tip area height
-                border_radius=8,
-                bgcolor=ft.colors.SURFACE_VARIANT,
-                margin=ft.margin.only(top=15),
-            ),
-        ], spacing=0),
+        ], spacing=0, expand=True),  # Allow inner containers to expand
         expand=True,
         border=ft.border.all(2, PASTEL_PURPLE),
         border_radius=12,
@@ -926,38 +1237,97 @@ def build_ui(page: ft.Page, callbacks=None):
         bgcolor=SOFT_PURPLE,
     )
 
-    main_content.content = ft.Container(notes_view, expand=True, padding=ft.padding.all(10))
+    # Now that all views are defined, create the proper navigation handler
+    def create_nav_handler(index):
+        """Create navigation handler with proper view references"""
+        def handler(_):
+            current_nav["selected"] = index
+            if index == 0:
+                main_content.content = notes_view
+            elif index == 1:
+                main_content.content = trans_view
+            else:
+                main_content.content = ai_view
+            
+            # Update button styles
+            for i, btn in enumerate(nav_buttons):
+                btn.style = ft.ButtonStyle(
+                    bgcolor=PASTEL_PURPLE if i == index else ft.colors.SURFACE_VARIANT,
+                    color=ft.colors.ON_PRIMARY if i == index else ft.colors.ON_SURFACE,
+                )
+            page.update()
+        return handler
 
-    # Create navigation container with truly fixed center-left positioning
-    nav_container = ft.Container(
-        ref=nav_container_ref,
-        content=ft.Column([
-            ft.Container(expand=True),  # Top spacer - pushes nav to center
-            nav,  # Navigation buttons in the center
-            ft.Container(expand=True),  # Bottom spacer - keeps nav centered
-        ]),
-        width=200,
-        height=900,  # Fixed height that matches window height
-        bgcolor=LIGHT_GRAY,
-        padding=ft.padding.all(12),
-    )
+    # Update navigation button handlers with proper references
+    nav_buttons[0].on_click = create_nav_handler(0)
+    nav_buttons[1].on_click = create_nav_handler(1)
+    nav_buttons[2].on_click = create_nav_handler(2)
 
-    layout = ft.Row([
-        nav_container,
-        ft.VerticalDivider(width=2, color=PASTEL_PURPLE),
+    main_content.content = notes_view  # Content handled directly, no wrapper needed
+
+
+    
+    # Content column with mode tabs and main content
+    content_column = ft.Column([
+        mode_tabs,  # Navigation buttons moved here
         ft.Container(
             main_content,
-            expand=True,
-            alignment=ft.alignment.top_left,  # Ensure content starts at top
-            bgcolor=WHITE,
+            expand=True,  # Allow full expansion
         ),
-    ], expand=True, spacing=0, alignment=ft.MainAxisAlignment.START)
+    ], spacing=0, expand=True)
+    
+    # Content container with specified structure (wrapped in Column for scrolling)
+    content = ft.Container(
+        expand=True,
+        alignment=ft.alignment.top_left,
+        padding=ft.padding.only(left=24, right=24, top=0),  # Specified padding
+        content=ft.Column(
+            [content_column],
+            expand=True,  # Remove scroll to allow full expansion
+        ),
+        bgcolor=WHITE,
+        margin=ft.margin.all(0),  # Remove stray margins
+    )
+    
+    # Main app layout with proper Row structure
+    main_app_content = ft.Column([
+        ft.Row(
+            controls=[sidebar, divider, content],
+            spacing=0,
+            expand=True,
+            vertical_alignment=ft.CrossAxisAlignment.START,  # Align to top
+        ),
+    ], spacing=0, expand=True)
+    
+    main_app_layout = main_app_content
 
+    # Complete the enter_main_app function now that we have all components
+    def complete_enter_main_app(e=None):
+        """Navigate from landing page to main application"""
+        app_state["show_landing"] = False
+        page.appbar = app_bar  # Show app bar with back button
+        main_container.content = main_app_layout
+        page.update()
+    
+    # Replace the enter_main_app function reference
+    enter_main_app = complete_enter_main_app
+    
+    # Show landing page initially
+    if app_state["show_landing"]:
+        page.appbar = None  # Hide app bar on landing page
+        main_container.content = create_landing_page(page, enter_main_app)
+    else:
+        page.appbar = app_bar
+        main_container.content = main_app_layout
+
+    # Initialize tree UI
+    build_tree_ui()
+    
+
+    
     # Add overlays and components to page
-    page.appbar = app_bar
-    page.overlay.extend([file_picker, add_class_dialog, document_picker])
-    page.add(layout)
+    page.overlay.extend([file_picker, add_folder_dialog, add_note_dialog, document_picker])
+    page.add(main_container)
 
 
 # End of file
-

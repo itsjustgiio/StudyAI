@@ -1,115 +1,105 @@
-"""
-Class Management Handler
-Handles all class-related button functionality.
+# app/handlers/class_handlers.py
+from __future__ import annotations
 
-TODO for team members:
-- Implement actual class creation logic
-- Add class validation
-- Implement class switching with data persistence
-- Add class deletion with confirmation
-- Integrate with database/storage system
-"""
-
-import flet as ft
+from pathlib import Path
 from typing import Any
+import flet as ft
 
 
 class ClassHandler:
-    """Handles class management operations"""
-    
+    """
+    Minimal, working class manager.
+    - Keeps a list of classes in data/classes/
+    - Ensures a default 'General' class exists
+    - Provides add / switch / delete helpers
+    - Emits snackbar messages for UX
+    """
+
+    BASE = Path("data/classes")
+
     def __init__(self, page: ft.Page):
         self.page = page
-        # TODO: Initialize any required services (database, file system, etc.)
-    
-    def add_new_class(self, e: Any = None):
+
+        # Ensure base directory and default class exist
+        self.BASE.mkdir(parents=True, exist_ok=True)
+
+        self.classes = sorted([p.name for p in self.BASE.iterdir() if p.is_dir()])
+        if not self.classes:
+            (self.BASE / "General").mkdir(parents=True, exist_ok=True)
+            self.classes = ["General"]
+
+        self.current_class = self.classes[0]
+
+    # ---------- helpers ----------
+
+    def _show(self, msg: str, ok: bool = True) -> None:
+        color = ft.colors.GREEN if ok else ft.colors.RED
+        self.page.show_snack_bar(ft.SnackBar(content=ft.Text(msg), bgcolor=color))
+
+    @staticmethod
+    def _sanitize(name: str) -> str:
+        """Make a filesystem-safe class name (very basic)."""
+        keep = []
+        for ch in name.strip():
+            keep.append(ch if ch.isalnum() or ch in (" ", "_", "-") else "_")
+        out = "".join(keep).strip()
+        return out or "Untitled"
+
+    # ---------- public API (used by UI/ButtonManager) ----------
+
+    def get_current_class(self) -> str:
+        return self.current_class
+
+    def list_classes(self) -> list[str]:
+        return list(self.classes)
+
+    def add_new_class(self, e: Any = None, class_name: str | None = None) -> None:
+        """Add a class by name; if called from UI event, read value from control."""
+        if class_name is None and e is not None:
+            class_name = getattr(e.control, "value", None)
+
+        class_name = self._sanitize(class_name or "")
+        if not class_name:
+            self._show("⚠️ Please enter a class name!", ok=False)
+            return
+
+        if class_name in self.classes:
+            self._show("⚠️ Class already exists", ok=False)
+            return
+
+        (self.BASE / class_name).mkdir(parents=True, exist_ok=True)
+        self.classes.append(class_name)
+        self.classes.sort()
+        self.current_class = class_name
+        self._show(f"✅ Created and switched to class: {class_name}")
+
+    def switch_class(self, e: Any = None, class_name: str | None = None) -> None:
+        """Switch currently active class."""
+        if class_name is None and e is not None:
+            class_name = getattr(e.control, "value", None)
+
+        if class_name in self.classes:
+            self.current_class = class_name
+            self._show(f"✅ Switched to: {class_name}")
+        else:
+            self._show("⚠️ Invalid class selection", ok=False)
+
+    def delete_class(self, e: Any = None, class_name: str | None = None) -> None:
         """
-        Handle adding a new class
-        
-        TODO: Implement the following:
-        1. Show dialog to get class name from user
-        2. Validate class name (not empty, not duplicate)
-        3. Create new class in storage system
-        4. Update UI dropdown with new class
-        5. Switch to the new class
-        6. Show success message
+        Remove a class directory from the list (non-destructive by default).
+        NOTE: To actually delete files, you could add shutil.rmtree here.
         """
-        # Placeholder implementation
-        self._show_message("🏫 Add New Class - Ready for implementation!")
-        
-        # Example of what the implementation might look like:
-        # class_name = self._get_class_name_from_dialog()
-        # if self._validate_class_name(class_name):
-        #     self._create_class(class_name)
-        #     self._update_class_dropdown()
-        #     self._switch_to_class(class_name)
-        #     self._show_message(f"✅ Created class: {class_name}")
-    
-    def switch_class(self, e: Any = None):
-        """
-        Handle switching between classes
-        
-        TODO: Implement the following:
-        1. Get selected class from dropdown
-        2. Save current class data
-        3. Load data for selected class
-        4. Update all UI components with new class data
-        5. Show confirmation message
-        """
-        # Placeholder implementation
-        self._show_message("🔄 Switch Class - Ready for implementation!")
-        
-        # Example implementation:
-        # selected_class = e.control.value if hasattr(e.control, 'value') else None
-        # if selected_class:
-        #     self._save_current_class_data()
-        #     self._load_class_data(selected_class)
-        #     self._update_ui_components()
-        #     self._show_message(f"✅ Switched to: {selected_class}")
-    
-    def delete_class(self, e: Any = None):
-        """
-        Handle deleting a class
-        
-        TODO: Implement the following:
-        1. Show confirmation dialog
-        2. Prevent deletion of last remaining class
-        3. Delete class from storage
-        4. Update dropdown
-        5. Switch to another class
-        6. Show success message
-        """
-        # Placeholder implementation
-        self._show_message("🗑️ Delete Class - Ready for implementation!")
-        
-        # Example implementation:
-        # if self._confirm_deletion():
-        #     current_class = self._get_current_class()
-        #     if self._can_delete_class(current_class):
-        #         self._delete_class_data(current_class)
-        #         self._update_class_dropdown()
-        #         self._switch_to_default_class()
-        #         self._show_message(f"✅ Deleted class: {current_class}")
-    
-    def _show_message(self, message: str, success: bool = True):
-        """Helper method to show messages"""
-        color = ft.colors.GREEN if success else ft.colors.RED
-        self.page.show_snack_bar(
-            ft.SnackBar(content=ft.Text(message), bgcolor=color)
-        )
-    
-    # TODO: Add helper methods for team members to implement
-    # def _get_class_name_from_dialog(self) -> str:
-    #     """Show dialog and return class name"""
-    #     pass
-    # 
-    # def _validate_class_name(self, name: str) -> bool:
-    #     """Validate class name"""
-    #     pass
-    # 
-    # def _create_class(self, name: str):
-    #     """Create new class in storage"""
-    #     pass
-    # 
-    # def _update_class_dropdown(self):
-    #     """Update UI dropdown with current classes"""
-    #     pass
+        target = class_name or (self.current_class if self.current_class else None)
+        if not target or target not in self.classes:
+            self._show("⚠️ No such class", ok=False)
+            return
+
+        if len(self.classes) <= 1:
+            self._show("⚠️ Cannot delete the last remaining class", ok=False)
+            return
+
+        # Remove from in-memory list (keep files for safety)
+        self.classes.remove(target)
+        # Switch to first remaining class
+        self.current_class = self.classes[0]
+        self._show(f"🗑️ Removed class: {target}. Active: {self.current_class}")
