@@ -27,8 +27,10 @@ from .landing_page import create_landing_page
 # UI CONSTANTS
 # ============================================================================
 
-# Content height for all main areas
-CONTENT_HEIGHT = 675  # Fixed height for all content areas
+# Default content height for all main areas
+# At runtime we compute a responsive `content_height` (sticky) based on the page
+# window height so content areas shrink/expand when the app is resized.
+DEFAULT_CONTENT_HEIGHT = 675  # Fallback fixed height for content areas
 
 # ============================================================================
 # STUB FUNCTIONS - UI PLACEHOLDERS ONLY
@@ -84,6 +86,37 @@ def build_ui(page: ft.Page, callbacks=None):
     page.padding = 0  # Remove any default padding
     page.scroll = ft.ScrollMode.AUTO
     page.padding = 0
+    # Responsive (sticky) content height: compute from window height
+    # Use a sensible minimum so small windows don't collapse the UI.
+    content_height = max(300, int(page.window_height * 0.65)) if page.window_height else DEFAULT_CONTENT_HEIGHT
+
+    # Refs for containers whose height should follow `content_height`
+    notes_content_ref: ft.Ref[ft.Container] = ft.Ref[ft.Container]()
+    trans_content_ref: ft.Ref[ft.Container] = ft.Ref[ft.Container]()
+    ai_content_ref: ft.Ref[ft.Container] = ft.Ref[ft.Container]()
+
+    def _on_resize(e=None):
+        """Recompute content_height and apply to main content containers."""
+        nonlocal content_height
+        try:
+            content_height = max(300, int(page.window_height * 0.65))
+        except Exception:
+            content_height = DEFAULT_CONTENT_HEIGHT
+
+        if notes_content_ref.current is not None:
+            notes_content_ref.current.height = content_height
+        if trans_content_ref.current is not None:
+            trans_content_ref.current.height = content_height
+        if ai_content_ref.current is not None:
+            ai_content_ref.current.height = content_height
+
+        try:
+            page.update()
+        except Exception:
+            pass
+
+    # Attach handler so Flet calls it on resize events
+    page.on_resize = _on_resize
     
     # App state
     app_state = {"show_landing": True}
@@ -677,7 +710,8 @@ def build_ui(page: ft.Page, callbacks=None):
                         # Main content area - fixed height
             ft.Container(
                 notes_editor_stack,
-                height=CONTENT_HEIGHT,  # Fixed height for consistency
+                ref=notes_content_ref,
+                height=content_height,
                 padding=ft.padding.all(8),  # Internal padding between border and textbox
                 border=ft.border.all(2, PASTEL_PURPLE),
                 border_radius=12,
@@ -923,7 +957,8 @@ def build_ui(page: ft.Page, callbacks=None):
             # Main content area - fixed height
             ft.Container(
                 transcription_tabs,
-                height=CONTENT_HEIGHT,  # Fixed height for consistency
+                ref=trans_content_ref,
+                height=content_height,
                 border=ft.border.all(2, PASTEL_PURPLE),
                 border_radius=12,
                 bgcolor=WHITE,
@@ -1188,7 +1223,8 @@ def build_ui(page: ft.Page, callbacks=None):
             # Main content area - fixed height
             ft.Container(
                 tabs,
-                height=CONTENT_HEIGHT,  # Fixed height for consistency
+                ref=ai_content_ref,
+                height=content_height,
                 border=ft.border.all(2, PASTEL_PURPLE),
                 border_radius=12,
                 bgcolor=WHITE,
