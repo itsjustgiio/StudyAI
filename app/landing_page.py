@@ -85,7 +85,7 @@ def create_landing_page(page: ft.Page, on_get_started):
                     
                     # Tagline - responsive size and width
                     ft.Text(
-                        "Transform your learning experience with intelligent note-taking,\\ntranscription, and AI-powered study tools",
+                        "Transform your learning experience with intelligent note-taking, transcription, and AI-powered study tools",
                         size=sizes['tagline_size'],
                         color=TEXT_DARK,
                         text_align=ft.TextAlign.CENTER,

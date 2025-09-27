@@ -15,7 +15,7 @@ from typing import Any
 
 
 class TranscriptionHandler:
-    def __init__(self, page: ft.Page, class_handler: ClassHandler):
+    def __init__(self, page: ft.Page, class_handler: ClassHandler, settings: dict | None = None):
         """Transcription handler now uses an injected shared ClassHandler.
 
         Args:
@@ -24,7 +24,10 @@ class TranscriptionHandler:
         """
         self.page = page
         self.class_handler = class_handler
-        self.transcriber = Transcriber(model_size="tiny")  # load once
+        self.settings = settings or {"whisper_model": "tiny"}
+        # Do not load model eagerly; load lazily to respect UI selection and reduce startup time
+        self.transcriber = None
+        self._loaded_model = None
         self.is_recording = False
         self.current_recording = None
         # Will be attached in ButtonManager.get_callbacks()
@@ -43,7 +46,21 @@ class TranscriptionHandler:
             # 1. Save audio file
             saved_audio = audio.save_audio_file(file.path, file.name, class_name)
 
-            # 2. Transcribe with Whisper
+            # 2. Transcribe with Whisper using selected model
+            try:
+                desired = self.settings.get('whisper_model', 'tiny') if self.settings else 'tiny'
+            except Exception:
+                desired = 'tiny'
+
+            # (Re)load transcriber if needed
+            if self.transcriber is None or self._loaded_model != desired:
+                try:
+                    self.transcriber = Transcriber(model_size=desired)
+                    self._loaded_model = desired
+                except Exception as err:
+                    self._show_message(f"Failed to load Whisper model '{desired}': {err}", success=False)
+                    return
+
             text = self.transcriber.transcribe_file(saved_audio)
 
             # 2.5. Format for readability (split into sentences)
@@ -66,6 +83,13 @@ class TranscriptionHandler:
                 self.callbacks["display_transcript"](
                     transcript_path.name, snippet, str(transcript_path)
                 )
+
+            # Update file transcription text area if UI provides setter
+            try:
+                if self.callbacks and "set_file_transcription" in self.callbacks:
+                    self.callbacks["set_file_transcription"](text)
+            except Exception:
+                pass
 
             # 4. Summarize transcript into summaries folder
             try:
@@ -114,7 +138,8 @@ class TranscriptionHandler:
 
     def _show_message(self, message: str, success: bool = True):
         """Show styled snackbar notifications"""
-        bgcolor = "#4B2E83" if success else "#800020"  # dark purple / maroon
+        # Calmer palette
+        bgcolor = "#66A36C" if success else "#6A2830"
         self.page.show_snack_bar(
             ft.SnackBar(
                 content=ft.Text(message, color="white"),

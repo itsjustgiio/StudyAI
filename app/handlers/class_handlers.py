@@ -33,7 +33,8 @@ class ClassHandler:
     # ---------- helpers ----------
 
     def _show(self, msg: str, ok: bool = True) -> None:
-        color = ft.colors.GREEN if ok else ft.colors.RED
+        # Calmer snackbar palette: success -> calm light green, error -> muted maroon
+        color = "#66A36C" if ok else "#6A2830"
         self.page.show_snack_bar(ft.SnackBar(content=ft.Text(msg), bgcolor=color))
 
     @staticmethod
@@ -73,6 +74,12 @@ class ClassHandler:
         # NEW: Scaffold audio/, transcripts/, summaries/ right away
         from app.audio import ensure_class_dir
         ensure_class_dir(class_name)
+
+        # NEW: Scaffold notes/ with standard categories
+        notes_dir = self.BASE / class_name / "notes"
+        (notes_dir / "Daily Notes").mkdir(parents=True, exist_ok=True)
+        (notes_dir / "Syllabus").mkdir(parents=True, exist_ok=True)
+        (notes_dir / "Textbook").mkdir(parents=True, exist_ok=True)
 
         # Update in-memory state
         self.classes.append(class_name)

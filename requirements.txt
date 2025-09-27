@@ -27,3 +27,9 @@ pytest==8.3.3
 
 
 reportlab==4.2.5
+# Optional - document parsing and OCR (install if you plan to use Upload Document)
+# Pillow for image handling, pytesseract for OCR, PyPDF2 and python-docx for document parsing
+Pillow==10.1.0
+pytesseract==0.3.10
+PyPDF2==3.0.1
+python-docx==0.8.11
