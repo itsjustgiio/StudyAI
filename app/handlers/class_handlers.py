@@ -1,153 +1,105 @@
+# app/handlers/class_handlers.py
+from __future__ import annotations
 
-"""
-Class Management Handler
-Handles all class-related button functionality for the StudyAI UI.
-This module is intentionally UI-aware: it receives refs from ui.py and mutates
-those controls directly so we don't need the rest of the app to be present.
-
-It provides safe no-op fallbacks for any missing refs.
-
-Public API:
-    - ClassHandler(page, *, class_dropdown_ref, add_class_dialog_ref,
-                   new_class_name_ref, notes_ref)
-    - on_class_change(event)
-    - open_add_class_dialog(event)
-    - close_add_class_dialog(event)
-    - add_new_class(event)
-    - save_current_class_data()
-"""
-
-from typing import Dict, Any, Optional, List
+from pathlib import Path
+from typing import Any
 import flet as ft
 
 
-def _safe_get(ref: Optional[ft.Ref]):
-    return ref.current if ref is not None else None
-
-
 class ClassHandler:
-    def __init__(
-        self,
-        page: ft.Page,
-        *,
-        class_dropdown_ref: Optional[ft.Ref] = None,
-        add_class_dialog_ref: Optional[ft.Ref] = None,
-        new_class_name_ref: Optional[ft.Ref] = None,
-        notes_ref: Optional[ft.Ref] = None,
-    ):
+    """
+    Minimal, working class manager.
+    - Keeps a list of classes in data/classes/
+    - Ensures a default 'General' class exists
+    - Provides add / switch / delete helpers
+    - Emits snackbar messages for UX
+    """
+
+    BASE = Path("data/classes")
+
+    def __init__(self, page: ft.Page):
         self.page = page
-        self.class_dropdown_ref = class_dropdown_ref
-        self.add_class_dialog_ref = add_class_dialog_ref
-        self.new_class_name_ref = new_class_name_ref
-        self.notes_ref = notes_ref
 
-        # In-memory store (UI session only)
-        self.classes: List[str] = ["General"]
-        self.selected: str = "General"
-        self.data: Dict[str, Dict[str, Any]] = {
-            "General": {"notes": "", "transcriptions": [], "ai_history": []}
-        }
+        # Ensure base directory and default class exist
+        self.BASE.mkdir(parents=True, exist_ok=True)
 
-        # Initialize dropdown if present
-        dd = _safe_get(self.class_dropdown_ref)
-        if dd is not None:
-            dd.options = [ft.dropdown.Option("General")]
-            dd.value = "General"
+        self.classes = sorted([p.name for p in self.BASE.iterdir() if p.is_dir()])
+        if not self.classes:
+            (self.BASE / "General").mkdir(parents=True, exist_ok=True)
+            self.classes = ["General"]
 
-    # ---------------------------
-    # Dialog controls
-    # ---------------------------
-    def open_add_class_dialog(self, _=None):
-        dlg = _safe_get(self.add_class_dialog_ref)
-        if dlg is not None:
-            dlg.open = True
-            self.page.update()
+        self.current_class = self.classes[0]
 
-    def close_add_class_dialog(self, _=None):
-        dlg = _safe_get(self.add_class_dialog_ref)
-        if dlg is not None:
-            dlg.open = False
-            self.page.update()
+    # ---------- helpers ----------
 
-    # ---------------------------
-    # Core actions
-    # ---------------------------
-    def _validate_class_name(self, name: str) -> Optional[str]:
-        name = (name or "").strip()
-        if not name:
-            return "Please enter a class name."
-        if any(ch in name for ch in "<>:/\\|?*\"'\n\t"):
-            return "Class name has invalid characters."
-        if name in self.classes:
-            return "Class already exists."
-        if len(name) > 40:
-            return "Class name too long (max 40)."        
-        return None
+    def _show(self, msg: str, ok: bool = True) -> None:
+        color = ft.colors.GREEN if ok else ft.colors.RED
+        self.page.show_snack_bar(ft.SnackBar(content=ft.Text(msg), bgcolor=color))
 
-    def add_new_class(self, _=None):
-        tf = _safe_get(self.new_class_name_ref)
-        name = (tf.value if tf is not None else "").strip()
-        err = self._validate_class_name(name)
-        if err:
-            # surface error unobtrusively
-            try:
-                self.page.snack_bar = ft.SnackBar(ft.Text(err))
-                self.page.snack_bar.open = True
-                self.page.update()
-            except Exception:
-                pass
+    @staticmethod
+    def _sanitize(name: str) -> str:
+        """Make a filesystem-safe class name (very basic)."""
+        keep = []
+        for ch in name.strip():
+            keep.append(ch if ch.isalnum() or ch in (" ", "_", "-") else "_")
+        out = "".join(keep).strip()
+        return out or "Untitled"
+
+    # ---------- public API (used by UI/ButtonManager) ----------
+
+    def get_current_class(self) -> str:
+        return self.current_class
+
+    def list_classes(self) -> list[str]:
+        return list(self.classes)
+
+    def add_new_class(self, e: Any = None, class_name: str | None = None) -> None:
+        """Add a class by name; if called from UI event, read value from control."""
+        if class_name is None and e is not None:
+            class_name = getattr(e.control, "value", None)
+
+        class_name = self._sanitize(class_name or "")
+        if not class_name:
+            self._show("⚠️ Please enter a class name!", ok=False)
             return
 
-        # Create class
-        self.classes.append(name)
-        self.data[name] = {"notes": "", "transcriptions": [], "ai_history": []}
-        self.selected = name
-
-        # Update dropdown
-        dd = _safe_get(self.class_dropdown_ref)
-        if dd is not None:
-            dd.options = [ft.dropdown.Option(c) for c in self.classes]
-            dd.value = name
-
-        # Close dialog and clear input
-        dlg = _safe_get(self.add_class_dialog_ref)
-        if dlg is not None:
-            dlg.open = False
-        if tf is not None:
-            tf.value = ""
-
-        self.page.update()
-
-    def save_current_class_data(self):
-        # Save notes text into current class
-        notes = _safe_get(self.notes_ref)
-        if self.selected not in self.data:
-            self.data[self.selected] = {"notes": "", "transcriptions": [], "ai_history": []}
-        if notes is not None:
-            self.data[self.selected]["notes"] = notes.value or ""
-
-    def on_class_change(self, e=None):
-        # Persist current data first
-        self.save_current_class_data()
-
-        dd = _safe_get(self.class_dropdown_ref)
-        if dd is None:
+        if class_name in self.classes:
+            self._show("⚠️ Class already exists", ok=False)
             return
 
-        new_name = (dd.value or "General").strip()
-        if new_name not in self.classes:
-            # If user typed a new value manually (editable dropdown), normalize
-            if new_name:
-                self.classes.append(new_name)
-                self.data.setdefault(new_name, {"notes": "", "transcriptions": [], "ai_history": []})
-            else:
-                new_name = "General"
+        (self.BASE / class_name).mkdir(parents=True, exist_ok=True)
+        self.classes.append(class_name)
+        self.classes.sort()
+        self.current_class = class_name
+        self._show(f"✅ Created and switched to class: {class_name}")
 
-        self.selected = new_name
+    def switch_class(self, e: Any = None, class_name: str | None = None) -> None:
+        """Switch currently active class."""
+        if class_name is None and e is not None:
+            class_name = getattr(e.control, "value", None)
 
-        # Load notes into editor
-        notes = _safe_get(self.notes_ref)
-        if notes is not None:
-            notes.value = self.data.get(new_name, {}).get("notes", "")
+        if class_name in self.classes:
+            self.current_class = class_name
+            self._show(f"✅ Switched to: {class_name}")
+        else:
+            self._show("⚠️ Invalid class selection", ok=False)
 
-        self.page.update()
+    def delete_class(self, e: Any = None, class_name: str | None = None) -> None:
+        """
+        Remove a class directory from the list (non-destructive by default).
+        NOTE: To actually delete files, you could add shutil.rmtree here.
+        """
+        target = class_name or (self.current_class if self.current_class else None)
+        if not target or target not in self.classes:
+            self._show("⚠️ No such class", ok=False)
+            return
+
+        if len(self.classes) <= 1:
+            self._show("⚠️ Cannot delete the last remaining class", ok=False)
+            return
+
+        # Remove from in-memory list (keep files for safety)
+        self.classes.remove(target)
+        # Switch to first remaining class
+        self.current_class = self.classes[0]
+        self._show(f"🗑️ Removed class: {target}. Active: {self.current_class}")

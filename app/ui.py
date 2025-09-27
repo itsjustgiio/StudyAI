@@ -21,6 +21,7 @@ import asyncio
 import flet as ft
 
 from .landing_page import create_landing_page
+from pathlib import Path
 
 
 # ============================================================================
@@ -59,7 +60,7 @@ async def stub_stop_transcription():
 # Your main.py should do:  ft.app(build_ui)
 # ----------------------------
 
-def build_ui(page: ft.Page, callbacks=None):
+def build_ui(page: ft.Page, callbacks: dict | None = None):
     """Build UI with optional button callbacks from ButtonManager"""
     if callbacks is None:
         callbacks = {}  # Fallback to empty dict if no callbacks provided
@@ -100,11 +101,13 @@ def build_ui(page: ft.Page, callbacks=None):
     current_classes = {"classes": ["General"], "selected": "General"}
     class_data = {"General": {"notes": "", "transcriptions": [], "ai_history": []}}
     
+    # Class management is provided by the shared ButtonManager callbacks
+    # UI should query and update state via callbacks provided by ButtonManager
     def save_current_class_data():
         """Save current content to the selected class - UI ONLY"""
-        # TODO: Wire in main.py to call appropriate class manager
+        # TODO: Wire in main.py to call appropriate class manager if needed
         pass
-    
+
     def load_class_data(class_name):
         """Load data for the selected class - UI ONLY"""
         # TODO: Wire in main.py to call appropriate class manager
@@ -127,15 +130,16 @@ def build_ui(page: ft.Page, callbacks=None):
     new_class_name_ref = ft.Ref[ft.TextField]()
     
     def on_class_change(e):
-        """Handle class selection change - UI ONLY"""
-        # TODO: Wire in main.py to call appropriate class manager
-        pass
+        """Handle class selection change - delegate to centralized handler if available"""
+        callbacks.get('switch_class', lambda ev: None)(e)
+    
     class_dropdown = ft.Dropdown(
         ref=class_dropdown_ref,
         width=150,
-        value="General",
-        options=[ft.dropdown.Option("General")],
-        on_change=on_class_change,
+        # populate initial value and options from callbacks provided by ButtonManager
+        value=callbacks.get("get_current_class", lambda: "General")(),
+        options=[ft.dropdown.Option(cls) for cls in callbacks.get("list_classes", lambda: ["General"])()],
+        on_change=lambda e: callbacks.get("switch_class", on_class_change)(e),
         text_style=ft.TextStyle(size=14, color=ft.colors.BLACK),
         bgcolor=WHITE,
         color=ft.colors.BLACK,  # Text color for selected value
@@ -146,44 +150,54 @@ def build_ui(page: ft.Page, callbacks=None):
         new_class_name_ref.current.value = ""
         page.update()
     def add_new_class(e):
-        """Add a new class"""
+        """Local fallback to add a class if callbacks are not provided."""
         class_name = new_class_name_ref.current.value.strip()
-        if class_name and class_name not in current_classes["classes"]:
-            # Add to classes list
-            current_classes["classes"].append(class_name)
-            class_data[class_name] = {"notes": "", "transcriptions": [], "ai_history": []}
-            
-            # Update dropdown options
-            class_dropdown_ref.current.options = [
-                ft.dropdown.Option(cls) for cls in current_classes["classes"]
-            ]
-            
-            # Switch to new class
-            save_current_class_data()
-            current_classes["selected"] = class_name
-            class_dropdown_ref.current.value = class_name
-            load_class_data(class_name)
-            
-            # Close dialog and show success message
-            add_class_dialog_ref.current.open = False
-            new_class_name_ref.current.value = ""
-            page.snack_bar = ft.SnackBar(ft.Text(f"✅ Added new class: {class_name}"))
-            page.snack_bar.open = True
-            page.update()
-        elif class_name in current_classes["classes"]:
-            # Show error but don't close dialog
-            page.snack_bar = ft.SnackBar(ft.Text("⚠️ Class already exists!"))
-            page.snack_bar.open = True
-            page.update()
-        elif not class_name:
-            # Show error for empty name but don't close dialog
+        if not class_name:
             page.snack_bar = ft.SnackBar(ft.Text("⚠️ Please enter a class name!"))
             page.snack_bar.open = True
             page.update()
+            return
+
+        # If a centralized add_class exists, call it with the typed name
+        if callbacks.get("add_class"):
+            callbacks.get("add_class")(None, class_name=class_name)
+        else:
+            # fallback: create folder locally
+            folder_path = Path("data/classes") / class_name
+            folder_path.mkdir(parents=True, exist_ok=True)
+
+        # Refresh dropdown options from centralized source if available
+        class_dropdown_ref.current.options = [ft.dropdown.Option(cls) for cls in callbacks.get("list_classes", lambda: [class_name])()]
+        class_dropdown_ref.current.value = callbacks.get("get_current_class", lambda: class_name)()
+
+        # Close dialog and show success message
+        add_class_dialog_ref.current.open = False
+        new_class_name_ref.current.value = ""
+        page.snack_bar = ft.SnackBar(ft.Text(f"✅ Added new class: {class_name}"))
+        page.snack_bar.open = True
+        page.update()
+    
     def open_add_class_dialog(e):
         new_class_name_ref.current.value = ""  # Clear the field when opening
         add_class_dialog_ref.current.open = True
         page.update()
+    
+    # wrapper that reads the typed name and calls centralized callback
+    def add_class_via_callback(e):
+        name = new_class_name_ref.current.value.strip() if new_class_name_ref.current else ""
+        if not name:
+            page.snack_bar = ft.SnackBar(ft.Text("⚠️ Please enter a class name!"))
+            page.snack_bar.open = True
+            page.update()
+            return
+        callbacks.get("add_class", lambda *args, **kwargs: None)(None, class_name=name)
+        new_class_name_ref.current.value = ""
+        add_class_dialog_ref.current.open = False
+        # refresh dropdown options
+        class_dropdown_ref.current.options = [ft.dropdown.Option(cls) for cls in callbacks.get("list_classes", lambda: [name])()]
+        class_dropdown_ref.current.value = callbacks.get("get_current_class", lambda: name)()
+        page.update()
+
     add_class_dialog = ft.AlertDialog(
         ref=add_class_dialog_ref,
         modal=True,
@@ -204,8 +218,12 @@ def build_ui(page: ft.Page, callbacks=None):
             padding=ft.padding.all(10),
         ),
         actions=[
-            ft.TextButton("Cancel", on_click=lambda e: None),  # TODO: was `close_add_class_dialog` → wire in main.py to call appropriate manager via main.py  # TODO: was `close_add_class_dialog` → wire in main.py to call appropriate manager via main.py
-            ft.ElevatedButton("Add Class", on_click=lambda e: None, style=ft.ButtonStyle(bgcolor=PASTEL_PURPLE)),  # TODO: was `add_new_class` → wire in main.py to call appropriate manager via main.py  # TODO: was `add_new_class` → wire in main.py to call appropriate manager via main.py
+                ft.TextButton("Cancel", on_click=close_add_class_dialog),
+                ft.ElevatedButton(
+                    "Add Class",
+                    on_click=add_class_via_callback,
+                    style=ft.ButtonStyle(bgcolor=PASTEL_PURPLE)
+                )
         ],
         actions_alignment=ft.MainAxisAlignment.END,
     )
@@ -213,7 +231,7 @@ def build_ui(page: ft.Page, callbacks=None):
     add_class_btn = ft.IconButton(
         icon=ft.icons.ADD,
         tooltip="Add New Class",
-        on_click=open_add_class_dialog,  # TODO: was `open_add_class_dialog` → wire in main.py to call appropriate manager via main.py
+        on_click=open_add_class_dialog,  # open the dialog so user can type a class name
         icon_color=WHITE,
         bgcolor=PASTEL_PURPLE,  # Make + button purple
     )
@@ -549,7 +567,7 @@ def build_ui(page: ft.Page, callbacks=None):
 
     # Audio upload section
     file_picker = ft.FilePicker(
-        on_result=lambda e: handle_audio_upload(e.files[0] if e.files else None)
+        on_result=lambda e: callbacks.get("upload_audio", lambda ev: None)(e)
     )
     
     # Model size dropdown
@@ -585,11 +603,10 @@ def build_ui(page: ft.Page, callbacks=None):
     upload_btn = ft.ElevatedButton(
         "Upload Audio File",
         icon=ft.icons.UPLOAD_FILE,
-        on_click=lambda e: None,  # TODO: was `lambda _: file_picker.pick_files(allowed_extensions=["mp3", "wav", "m4a", "flac", "ogg"])` → wire in main.py to call app/pdf_manager.py (import/export/list PDFs)
-        style=ft.ButtonStyle(
-            bgcolor=PASTEL_PURPLE,
-            color=ft.colors.ON_PRIMARY,
-        )
+        on_click=lambda e: file_picker.pick_files(
+            allowed_extensions=["mp3", "wav", "m4a", "flac", "ogg", "mp4", "mov", "mkv"]
+        ),
+        style=ft.ButtonStyle(bgcolor=PASTEL_PURPLE, color=ft.colors.ON_PRIMARY),
     )
     
     transcribe_btn = ft.ElevatedButton(
