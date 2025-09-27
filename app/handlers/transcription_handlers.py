@@ -5,6 +5,8 @@ from app import summarizer
 import flet as ft
 from pathlib import Path
 import re
+from typing import Any
+
 
 
 class TranscriptionHandler:
