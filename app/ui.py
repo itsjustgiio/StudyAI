@@ -434,21 +434,64 @@ def build_ui(page: ft.Page, callbacks=None):
         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
     )
 
+    # State for notes guidance visibility
+    notes_guidance_visible = {"visible": True}
+    
+    # Guidance text container reference (not just the text)
+    notes_guidance_container_ref = ft.Ref[ft.Container]()
+    
+    def on_notes_change(e):
+        """Handle notes text change to hide/show guidance"""
+        if notes_ref.current and notes_guidance_container_ref.current:
+            has_text = bool(notes_ref.current.value and notes_ref.current.value.strip())
+            notes_guidance_container_ref.current.visible = not has_text
+            notes_guidance_visible["visible"] = not has_text
+            page.update()
+    
     notes_editor = ft.TextField(
         ref=notes_ref,
         multiline=True,
-        min_lines=1,  # Allow natural expansion within fixed container
+        min_lines=50,  # Allow natural expansion within fixed container
         max_lines=None,  # No line limit - container height controls size
         expand=True,
-        hint_text="Type your lecture notes here...\n\nTips:\n• Use bullet points for key concepts\n• Organize thoughts clearly\n• The AI will analyze this content",
-        hint_style=ft.TextStyle(color=ft.colors.OUTLINE),
         border=ft.InputBorder.NONE,  # Remove border to prevent double borders
         content_padding=ft.padding.all(8),  # Minimal padding to fit within container
         text_size=14,
         bgcolor=ft.colors.TRANSPARENT,  # Make background transparent
         width=None,  # Let container control width
         height=None,  # Let container control height
+        on_change=on_notes_change,  # Add change handler
     )
+    
+    # Guidance text overlay - must match TextField positioning exactly
+    notes_guidance = ft.Text(
+        value="Type your lecture notes here...\n\nTips:\n• Use bullet points for key concepts\n• Organize thoughts clearly\n• The AI will analyze this content",
+        size=14,  # Match TextField text_size exactly
+        color=ft.colors.OUTLINE,
+        font_family=None,  # Use default font like TextField
+        weight=ft.FontWeight.NORMAL,  # Match TextField font weight
+        selectable=False,  # Make it non-selectable so it doesn't interfere
+        text_align=ft.TextAlign.LEFT,  # Ensure left alignment like TextField
+    )
+    
+    # Guidance container positioned to match TextField's actual text cursor position
+    notes_guidance_container = ft.Container(
+        ref=notes_guidance_container_ref,
+        content=notes_guidance,
+        padding=ft.padding.only(left=8, right=8, top=21, bottom=8),  # Add extra top padding to align with cursor
+        alignment=ft.alignment.top_left,  # Top-left alignment to match TextField
+        disabled=True,  # Make it non-interactive so clicks pass through
+        visible=True,  # Initially visible
+        expand=True,  # Match TextField expand behavior
+    )
+    
+    # Stack to overlay guidance text under textfield - both elements fill the same space
+    notes_editor_stack = ft.Stack([
+        # Guidance text positioned behind the textfield
+        notes_guidance_container,
+        # TextField on top to receive all user interaction
+        notes_editor,
+    ])
 
     notes_view = ft.Container(
         ft.Column([
@@ -460,7 +503,7 @@ def build_ui(page: ft.Page, callbacks=None):
             ),
             # Main content area - fixed height for consistency
             ft.Container(
-                notes_editor,
+                notes_editor_stack,
                 height=590,  # Fixed height to fit properly within border
                 padding=ft.padding.all(8),  # Internal padding between border and textbox
                 border=ft.border.all(2, PASTEL_PURPLE),
@@ -571,6 +614,7 @@ def build_ui(page: ft.Page, callbacks=None):
         content_padding=ft.padding.all(10),
         text_style=ft.TextStyle(size=14),
         border_radius=8,
+        on_change=callbacks.get('model_change', lambda e: None),
     )
     
     upload_status_ref = ft.Ref[ft.Text]()

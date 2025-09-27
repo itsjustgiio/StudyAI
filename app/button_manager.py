@@ -59,6 +59,7 @@ class ButtonManager:
             'summarize_content': self.ai_handler.summarize_content,
             'ask_ai': self.ai_handler.ask_ai,
             'generate_quiz': self.ai_handler.generate_quiz,
+            'model_change': self.ai_handler.on_model_change,
             
             # Google Drive
             'connect_drive': self.google_drive_handler.connect_drive,

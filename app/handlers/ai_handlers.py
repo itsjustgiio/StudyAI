@@ -147,6 +147,33 @@ class AIHandler:
         #         self._display_concept_explanation(explanation)
         #         self._offer_follow_up_questions()
     
+    def on_model_change(self, e: Any = None):
+        """
+        Handle AI model selection change
+        
+        TODO: Implement the following:
+        1. Get selected model size from dropdown
+        2. Update current model configuration
+        3. Apply model settings to AI service
+        4. Show confirmation of model change
+        """
+        # Placeholder implementation
+        if e and hasattr(e, 'control') and hasattr(e.control, 'value'):
+            selected_model = e.control.value
+            self.current_model = selected_model
+            self._show_message(f"🤖 Model changed to: {selected_model}")
+        else:
+            self._show_message("🤖 Model Change - Ready for implementation!")
+        
+        # Example implementation:
+        # selected_model = e.control.value
+        # if self._validate_model(selected_model):
+        #     self.current_model = selected_model
+        #     self._update_ai_service_config(selected_model)
+        #     self._show_message(f"✅ Model changed to {selected_model}")
+        # else:
+        #     self._show_message("❌ Invalid model selection", success=False)
+    
     def clear_conversation(self, e: Any = None):
         """
         Handle clearing AI conversation history
