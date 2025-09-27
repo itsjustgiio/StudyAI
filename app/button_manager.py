@@ -6,6 +6,7 @@ This allows team members to work on different features independently.
 
 from typing import Any, Callable
 import flet as ft
+import os, sys, subprocess
 
 # Import all the handler modules
 from app.handlers import (
@@ -16,6 +17,16 @@ from app.handlers import (
     ai_handlers,
     google_drive_handlers
 )
+
+
+def open_file(path: str):
+    """Open file with the system default application"""
+    if sys.platform.startswith("darwin"):  # macOS
+        subprocess.call(("open", path))
+    elif os.name == "nt":  # Windows
+        os.startfile(path)
+    elif os.name == "posix":  # Linux
+        subprocess.call(("xdg-open", path))
 
 
 class ButtonManager:
@@ -33,11 +44,10 @@ class ButtonManager:
     
     def get_callbacks(self) -> dict:
         """Returns dictionary of all button callbacks for the UI"""
-        return {
+        callbacks = {
             # Class Management
             'add_class': self.class_handler.add_new_class,
             'switch_class': self.class_handler.switch_class,
-            # Class State Helpers
             'get_current_class': self.class_handler.get_current_class,
             'list_classes': lambda: self.class_handler.classes,
             'delete_class': self.class_handler.delete_class,
@@ -70,22 +80,45 @@ class ButtonManager:
             # 'upload_notes': self.google_drive_handler.upload_notes,
             'download_notes': self.google_drive_handler.download_notes,
             # 'sync_files': self.google_drive_handler.sync_files,
+
+            # File opening
+            'open_pdf': open_file,
         }
+
+        # 👇 Give the transcription handler access to all callbacks (including display_transcript)
+        self.transcription_handler.callbacks = callbacks
+
+        return callbacks
     
+    # ------------------------------
+    # Unified snackbar styling
+    # ------------------------------
     def show_success(self, message: str):
-        """Show success message to user"""
+        """Show success message with dark purple background"""
         self.page.show_snack_bar(
-            ft.SnackBar(content=ft.Text(message), bgcolor=ft.colors.GREEN)
+            ft.SnackBar(
+                content=ft.Text(message, color="white"),
+                bgcolor="#4B2E83",   # dark purple
+                duration=2000,
+            )
         )
     
     def show_error(self, message: str):
-        """Show error message to user"""
+        """Show error message with dark maroon background"""
         self.page.show_snack_bar(
-            ft.SnackBar(content=ft.Text(message), bgcolor=ft.colors.RED)
+            ft.SnackBar(
+                content=ft.Text(message, color="white"),
+                bgcolor="#800020",   # dark maroon
+                duration=2000,
+            )
         )
     
     def show_info(self, message: str):
-        """Show info message to user"""
+        """Show neutral info message with slate background"""
         self.page.show_snack_bar(
-            ft.SnackBar(content=ft.Text(message), bgcolor=ft.colors.BLUE)
+            ft.SnackBar(
+                content=ft.Text(message, color="white"),
+                bgcolor="#37474F",   # dark slate gray-blue
+                duration=2000,
+            )
         )

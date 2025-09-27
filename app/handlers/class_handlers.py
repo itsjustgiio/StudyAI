@@ -67,11 +67,20 @@ class ClassHandler:
             self._show("⚠️ Class already exists", ok=False)
             return
 
+        # Create the top-level class folder
         (self.BASE / class_name).mkdir(parents=True, exist_ok=True)
+
+        # NEW: Scaffold audio/, transcripts/, summaries/ right away
+        from app.audio import ensure_class_dir
+        ensure_class_dir(class_name)
+
+        # Update in-memory state
         self.classes.append(class_name)
         self.classes.sort()
         self.current_class = class_name
+
         self._show(f"✅ Created and switched to class: {class_name}")
+
 
     def switch_class(self, e: Any = None, class_name: str | None = None) -> None:
         """Switch currently active class."""
