@@ -533,10 +533,9 @@ def build_ui(page: ft.Page, callbacks=None):
     )
 
     trans_controls = ft.Row([
-        start_btn, 
+        start_btn,
         stop_btn,
         ft.Container(expand=True),
-        ft.Text("💡 Demo: Will show sample transcription", size=12, italic=True)
     ], spacing=10)
 
     trans_live = ft.ListView(
@@ -577,7 +576,6 @@ def build_ui(page: ft.Page, callbacks=None):
     upload_status_ref = ft.Ref[ft.Text]()
     upload_status = ft.Text(
         ref=upload_status_ref,
-        value="No file selected",
         size=12,
         color=ft.colors.ON_SURFACE,
     )
@@ -592,23 +590,12 @@ def build_ui(page: ft.Page, callbacks=None):
         )
     )
     
-    transcribe_btn = ft.ElevatedButton(
-        "Transcribe Audio",
-        icon=ft.icons.TRANSCRIBE,
-        on_click=lambda e: None,  # TODO: was `transcribe_audio_file` → wire in main.py to call app/transcription.py (start/stop streaming, captions)
-        disabled=True,
-        style=ft.ButtonStyle(
-            bgcolor=DARK_PURPLE,
-            color=ft.colors.ON_PRIMARY,
-        )
-    )
     
     upload_controls = ft.Column([
         ft.Row([
             upload_btn,
             model_size_dropdown,
             ft.Container(expand=True),
-            transcribe_btn,
         ], spacing=10),
         ft.Container(upload_status, padding=ft.padding.only(top=8)),
     ], spacing=8)
@@ -622,21 +609,21 @@ def build_ui(page: ft.Page, callbacks=None):
 
     # Live Transcription tab content
     live_transcription_tab = ft.Column([
-        # Controls section
+        # Header row with inline controls
         ft.Container(
-            ft.Column([
+            ft.Row([
                 ft.Row([
                     ft.Icon(ft.icons.MIC, color=PASTEL_PURPLE, size=20),
                     ft.Text("Live Transcription", size=16, weight=ft.FontWeight.BOLD),
                 ], spacing=8),
-                ft.Text("Record audio in real-time and get live transcription", size=12, color=ft.colors.OUTLINE),
-                ft.Container(height=10),
-                ft.Container(trans_controls, height=50),
-            ]),
+                ft.Container(expand=True),
+                start_btn,
+                stop_btn,
+            ], spacing=10, alignment=ft.MainAxisAlignment.START),
             padding=ft.padding.all(16),
-            height=130,
+            height=60,
         ),
-        ft.Container(height=15),
+        ft.Container(height=8),
         # Transcription output section
         ft.Container(
             ft.Column([

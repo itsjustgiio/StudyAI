@@ -76,30 +76,8 @@ class TranscriptionHandler:
         else:
             self._show_message("⚠️ Not currently recording!", success=False)
     
-    def transcribe_audio(self, e: Any = None):
-        """
-        Handle transcribing recorded audio to text
-        
-        TODO: Implement the following:
-        1. Get audio file from recording or file upload
-        2. Send to speech-to-text service (Google/Whisper/Azure)
-        3. Process transcription results
-        4. Display transcribed text in UI
-        5. Handle transcription errors
-        """
-        # Placeholder implementation
-        self._show_message("📝 Transcribe Audio - Ready for implementation!")
-        
-        # Example implementation:
-        # audio_file = self._get_audio_file()
-        # if audio_file:
-        #     transcription = self._call_speech_to_text_api(audio_file)
-        #     if transcription:
-        #         self._display_transcription(transcription)
-        #         self._save_transcription(transcription)
-        #         self._show_message("✅ Audio transcribed successfully")
-        #     else:
-        #         self._show_message("❌ Transcription failed", success=False)
+    # NOTE: Manual transcribe_audio method removed. Auto-transcription will be
+    # triggered automatically after upload or recording stop by future logic.
     
     def upload_audio(self, e: Any = None):
         """

@@ -53,7 +53,7 @@ class ButtonManager:
             'start_recording': self.transcription_handler.start_recording,
             'stop_recording': self.transcription_handler.stop_recording,
             'upload_audio': self.transcription_handler.upload_audio,
-            'transcribe_audio': self.transcription_handler.transcribe_audio,
+            # 'transcribe_audio' removed: auto-transcription will trigger after upload/recording
             
             # AI Features
             'summarize_content': self.ai_handler.summarize_content,
