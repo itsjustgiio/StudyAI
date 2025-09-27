@@ -1,45 +1,54 @@
-# Python cache
+# --- Python build/cache ---
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-*.pytest_cache
+*.py[cod]
+.pytest_cache/
 
-# Virtual environments
+# --- Virtual environments ---
 .venv/
-env/
 venv/
-*.env
+env/
 
-# Build / packaging
+# --- Build / packaging ---
 build/
 dist/
 *.egg-info/
 
-# Jupyter / IPython
-.ipynb_checkpoints/
-
-# VS Code / IDE configs
+# --- IDE / editors ---
 .vscode/
 .idea/
 
-# OS junk files
+# --- OS junk ---
 .DS_Store
 Thumbs.db
 
-# Logs
+# --- Logs ---
 *.log
 
-# Audio/Transcription test data
-data/transcripts/samples/
-*.wav
-*.mp3
+# --- Jupyter ---
+.ipynb_checkpoints/
 
-# Whisper transcription outputs
-data/transcripts/outputs/
-
-# Local secrets
+# --- Local env / secrets ---
+.env
 .env.local
 .env.*.local
 client_secret.json
 token.json
+
+# --- Audio / transcription test data (comment out if you need to track audio) ---
+data/classes
+data/transcripts/samples/
+*.wav
+*.mp3
+
+# --- Generated outputs ---
+data/transcripts/outputs/
+exports/
+
+# --- Class folders: keep the root, ignore subfolders ---
+data/classes/**
+!data/classes/
+!data/classes/.gitkeep
+token.json
+
+__pycache__/
+*.pyc
