@@ -96,17 +96,28 @@ def build_ui(page: ft.Page, callbacks=None):
         main_container.content = create_landing_page(page, enter_main_app)
         page.update()
     
-    # Class management system
-    current_classes = {"classes": ["General"], "selected": "General"}
-    class_data = {"General": {"notes": "", "transcriptions": [], "ai_history": []}}
+    # Tree-based class management system
+    class_tree_data = {
+        "type": "root",  
+        "children": {
+            "General": {
+                "type": "folder",
+                "expanded": True,
+                "children": {
+                    "My Notes": {"type": "note", "notes": "", "transcriptions": [], "ai_history": []}
+                }
+            }
+        }
+    }
+    current_selection = {"path": ["General", "My Notes"], "type": "note"}
     
-    def save_current_class_data():
-        """Save current content to the selected class - UI ONLY"""
+    def save_current_data():
+        """Save current content to the selected item - UI ONLY"""
         # TODO: Wire in main.py to call appropriate class manager
         pass
     
-    def load_class_data(class_name):
-        """Load data for the selected class - UI ONLY"""
+    def load_data(path):
+        """Load data for the selected item - UI ONLY"""
         # TODO: Wire in main.py to call appropriate class manager
         pass
     
@@ -121,101 +132,243 @@ def build_ui(page: ft.Page, callbacks=None):
     LIGHT_GRAY = "#F8F6FA"         # Very light gray with purple tint
     TEXT_DARK = "#4A4A4A"          # Dark gray for text
 
-    # Class management UI components
-    class_dropdown_ref = ft.Ref[ft.Dropdown]()
-    add_class_dialog_ref = ft.Ref[ft.AlertDialog]()
-    new_class_name_ref = ft.Ref[ft.TextField]()
+    # Tree-based class management UI components
+    tree_container_ref = ft.Ref[ft.Column]()
+    add_folder_dialog_ref = ft.Ref[ft.AlertDialog]()
+    add_note_dialog_ref = ft.Ref[ft.AlertDialog]()
+    new_folder_name_ref = ft.Ref[ft.TextField]()
+    new_note_name_ref = ft.Ref[ft.TextField]()
     
-    def on_class_change(e):
-        """Handle class selection change - UI ONLY"""
-        # TODO: Wire in main.py to call appropriate class manager
-        pass
-    class_dropdown = ft.Dropdown(
-        ref=class_dropdown_ref,
-        width=150,
-        value="General",
-        options=[ft.dropdown.Option("General")],
-        on_change=on_class_change,
-        text_style=ft.TextStyle(size=14, color=ft.colors.BLACK),
-        bgcolor=WHITE,
-        color=ft.colors.BLACK,  # Text color for selected value
-    )
+    def get_item_at_path(tree_data, path):
+        """Navigate to item at given path in tree"""
+        current = tree_data
+        for part in path:
+            if "children" in current and part in current["children"]:
+                current = current["children"][part]
+            else:
+                return None
+        return current
     
-    def close_add_class_dialog(e):
-        add_class_dialog_ref.current.open = False
-        new_class_name_ref.current.value = ""
-        page.update()
-    def add_new_class(e):
-        """Add a new class"""
-        class_name = new_class_name_ref.current.value.strip()
-        if class_name and class_name not in current_classes["classes"]:
-            # Add to classes list
-            current_classes["classes"].append(class_name)
-            class_data[class_name] = {"notes": "", "transcriptions": [], "ai_history": []}
+    def on_tree_item_click(path, item_type):
+        """Handle tree item selection"""
+        def handler(e):
+            current_selection["path"] = path.copy()
+            current_selection["type"] = item_type
+            save_current_data()
+            load_data(path)
+            build_tree_ui()  # Refresh tree to show selection
+            page.update()
+        return handler
+    
+    def toggle_folder(path):
+        """Toggle folder expanded/collapsed state"""
+        def handler(e):
+            item = get_item_at_path(class_tree_data, path)
+            if item and item["type"] == "folder":
+                item["expanded"] = not item.get("expanded", False)
+                build_tree_ui()  # Refresh tree
+                page.update()
+        return handler
+    
+    def build_tree_ui():
+        """Build the tree UI recursively"""
+        def build_tree_items(data, path=[]):
+            items = []
+            if "children" in data:
+                for name, item in data["children"].items():
+                    current_path = path + [name]
+                    is_selected = current_selection["path"] == current_path
+                    
+                    if item["type"] == "folder":
+                        # Folder row with expand/collapse and selection
+                        folder_row = ft.Row([
+                            ft.IconButton(
+                                icon=ft.icons.KEYBOARD_ARROW_DOWN if item.get("expanded", False) else ft.icons.KEYBOARD_ARROW_RIGHT,
+                                icon_size=16,
+                                on_click=toggle_folder(current_path),
+                                icon_color=PASTEL_PURPLE,
+                            ),
+                            ft.IconButton(
+                                icon=ft.icons.FOLDER_OPEN if item.get("expanded", False) else ft.icons.FOLDER,
+                                icon_size=16,
+                                on_click=on_tree_item_click(current_path, "folder"),
+                                icon_color=PASTEL_PURPLE if is_selected else TEXT_DARK,
+                            ),
+                            ft.Text(
+                                name, 
+                                size=14, 
+                                weight=ft.FontWeight.BOLD if is_selected else ft.FontWeight.NORMAL,
+                                color=PASTEL_PURPLE if is_selected else TEXT_DARK
+                            ),
+                        ], spacing=2, alignment=ft.MainAxisAlignment.START)
+                        
+                        items.append(ft.Container(
+                            folder_row,
+                            bgcolor=SOFT_PURPLE if is_selected else ft.colors.TRANSPARENT,
+                            border_radius=4,
+                            padding=ft.padding.only(left=len(path)*16)
+                        ))
+                        
+                        # Add children if expanded
+                        if item.get("expanded", False):
+                            items.extend(build_tree_items(item, current_path))
+                    
+                    elif item["type"] == "note":
+                        # Note row
+                        note_row = ft.Row([
+                            ft.Container(width=18),  # Spacing for alignment
+                            ft.Icon(ft.icons.DESCRIPTION, size=16, color=DARK_PURPLE if is_selected else TEXT_DARK),
+                            ft.Text(
+                                name, 
+                                size=13,
+                                weight=ft.FontWeight.BOLD if is_selected else ft.FontWeight.NORMAL,
+                                color=DARK_PURPLE if is_selected else TEXT_DARK
+                            ),
+                        ], spacing=6, alignment=ft.MainAxisAlignment.START)
+                        
+                        items.append(ft.Container(
+                            note_row,
+                            bgcolor=SOFT_PURPLE if is_selected else ft.colors.TRANSPARENT,
+                            border_radius=4,
+                            padding=ft.padding.only(left=len(path)*16 + 16),
+                            on_click=on_tree_item_click(current_path, "note")
+                        ))
             
-            # Update dropdown options
-            class_dropdown_ref.current.options = [
-                ft.dropdown.Option(cls) for cls in current_classes["classes"]
-            ]
+            return items
+        
+        tree_items = build_tree_items(class_tree_data)
+        if tree_container_ref.current:
+            tree_container_ref.current.controls = tree_items
+    
+    def add_folder_action(e):
+        """Add a new folder to the tree"""
+        folder_name = new_folder_name_ref.current.value.strip()
+        if folder_name:
+            # Add to root level for now (can be enhanced to add to selected folder)
+            class_tree_data["children"][folder_name] = {
+                "type": "folder",
+                "expanded": True,
+                "children": {}
+            }
             
-            # Switch to new class
-            save_current_class_data()
-            current_classes["selected"] = class_name
-            class_dropdown_ref.current.value = class_name
-            load_class_data(class_name)
-            
-            # Close dialog and show success message
-            add_class_dialog_ref.current.open = False
-            new_class_name_ref.current.value = ""
-            page.snack_bar = ft.SnackBar(ft.Text(f"✅ Added new class: {class_name}"))
+            add_folder_dialog_ref.current.open = False
+            new_folder_name_ref.current.value = ""
+            build_tree_ui()
+            page.snack_bar = ft.SnackBar(ft.Text(f"✅ Added folder: {folder_name}"))
             page.snack_bar.open = True
             page.update()
-        elif class_name in current_classes["classes"]:
-            # Show error but don't close dialog
-            page.snack_bar = ft.SnackBar(ft.Text("⚠️ Class already exists!"))
-            page.snack_bar.open = True
-            page.update()
-        elif not class_name:
-            # Show error for empty name but don't close dialog
-            page.snack_bar = ft.SnackBar(ft.Text("⚠️ Please enter a class name!"))
-            page.snack_bar.open = True
-            page.update()
-    def open_add_class_dialog(e):
-        new_class_name_ref.current.value = ""  # Clear the field when opening
-        add_class_dialog_ref.current.open = True
-        page.update()
-    add_class_dialog = ft.AlertDialog(
-        ref=add_class_dialog_ref,
+    
+    def add_note_action(e):
+        """Add a new note to the selected folder"""
+        note_name = new_note_name_ref.current.value.strip()
+        if note_name:
+            # Find the selected folder or use General as default
+            selected_path = current_selection["path"]
+            if current_selection["type"] == "note" and len(selected_path) > 1:
+                # If note is selected, add to its parent folder
+                parent_path = selected_path[:-1]
+            elif current_selection["type"] == "folder":
+                # If folder is selected, add to it
+                parent_path = selected_path
+            else:
+                # Default to General folder
+                parent_path = ["General"]
+            
+            parent_item = get_item_at_path(class_tree_data, parent_path)
+            if parent_item and parent_item["type"] == "folder":
+                parent_item["children"][note_name] = {
+                    "type": "note",
+                    "notes": "",
+                    "transcriptions": [],
+                    "ai_history": []
+                }
+                parent_item["expanded"] = True  # Expand to show new note
+                
+                add_note_dialog_ref.current.open = False
+                new_note_name_ref.current.value = ""
+                build_tree_ui()
+                page.snack_bar = ft.SnackBar(ft.Text(f"✅ Added note: {note_name}"))
+                page.snack_bar.open = True
+                page.update()
+    
+    # Dialog for adding folders
+    add_folder_dialog = ft.AlertDialog(
+        ref=add_folder_dialog_ref,
         modal=True,
-        title=ft.Text("📚 Add New Class"),
+        title=ft.Text("� Add New Folder"),
         content=ft.Container(
             ft.Column([
-                ft.Text("Enter the name of your new class:", size=14),
+                ft.Text("Enter the folder name:", size=14),
                 ft.TextField(
-                    ref=new_class_name_ref,
-                    hint_text="e.g., Computer Science 101",
+                    ref=new_folder_name_ref,
+                    hint_text="e.g., Computer Science",
                     autofocus=True,
-                    on_submit=add_new_class,
+                    on_submit=add_folder_action,
                     width=280,
                 ),
             ], spacing=15, tight=True),
             width=300,
-            height=120,  # Fixed compact height
+            height=120,
             padding=ft.padding.all(10),
         ),
         actions=[
-            ft.TextButton("Cancel", on_click=lambda e: None),  # TODO: was `close_add_class_dialog` → wire in main.py to call appropriate manager via main.py  # TODO: was `close_add_class_dialog` → wire in main.py to call appropriate manager via main.py
-            ft.ElevatedButton("Add Class", on_click=lambda e: None, style=ft.ButtonStyle(bgcolor=PASTEL_PURPLE)),  # TODO: was `add_new_class` → wire in main.py to call appropriate manager via main.py  # TODO: was `add_new_class` → wire in main.py to call appropriate manager via main.py
+            ft.TextButton("Cancel", on_click=lambda e: setattr(add_folder_dialog_ref.current, 'open', False) or page.update()),
+            ft.ElevatedButton("Add Folder", on_click=add_folder_action, style=ft.ButtonStyle(bgcolor=PASTEL_PURPLE)),
         ],
         actions_alignment=ft.MainAxisAlignment.END,
     )
     
-    add_class_btn = ft.IconButton(
-        icon=ft.icons.ADD,
-        tooltip="Add New Class",
-        on_click=open_add_class_dialog,  # TODO: was `open_add_class_dialog` → wire in main.py to call appropriate manager via main.py
-        icon_color=WHITE,
-        bgcolor=PASTEL_PURPLE,  # Make + button purple
+    # Dialog for adding notes
+    add_note_dialog = ft.AlertDialog(
+        ref=add_note_dialog_ref,
+        modal=True,
+        title=ft.Text("📄 Add New Note"),
+        content=ft.Container(
+            ft.Column([
+                ft.Text("Enter the note name:", size=14),
+                ft.TextField(
+                    ref=new_note_name_ref,
+                    hint_text="e.g., Lecture 1 Notes",
+                    autofocus=True,
+                    on_submit=add_note_action,
+                    width=280,
+                ),
+            ], spacing=15, tight=True),
+            width=300,
+            height=120,
+            padding=ft.padding.all(10),
+        ),
+        actions=[
+            ft.TextButton("Cancel", on_click=lambda e: setattr(add_note_dialog_ref.current, 'open', False) or page.update()),
+            ft.ElevatedButton("Add Note", on_click=add_note_action, style=ft.ButtonStyle(bgcolor=DARK_PURPLE)),
+        ],
+        actions_alignment=ft.MainAxisAlignment.END,
+    )
+    
+    # Tree container
+    tree_container = ft.Column(ref=tree_container_ref, spacing=2, tight=True)
+    
+    # Action buttons
+    add_folder_btn = ft.ElevatedButton(
+        content=ft.Row([
+            ft.Icon(ft.icons.CREATE_NEW_FOLDER, size=16),
+            ft.Text("Add Folder", size=12)
+        ], spacing=4, tight=True),
+        on_click=lambda e: setattr(add_folder_dialog_ref.current, 'open', True) or page.update(),
+        style=ft.ButtonStyle(bgcolor=PASTEL_PURPLE, color=WHITE),
+        height=32,
+        width=120,
+    )
+    
+    add_note_btn = ft.ElevatedButton(
+        content=ft.Row([
+            ft.Icon(ft.icons.NOTE_ADD, size=16),
+            ft.Text("Add Note", size=12)
+        ], spacing=4, tight=True),
+        on_click=lambda e: setattr(add_note_dialog_ref.current, 'open', True) or page.update(),
+        style=ft.ButtonStyle(bgcolor=DARK_PURPLE, color=WHITE),
+        height=32,
+        width=120,
     )
 
     # Refs & state
@@ -364,12 +517,23 @@ def build_ui(page: ft.Page, callbacks=None):
         ft.Divider(color=PASTEL_PURPLE, height=1),
         ft.Container(
             content=ft.Column([
-                ft.Text("Class:", size=14, color=TEXT_DARK, weight=ft.FontWeight.W_500),
+                ft.Row([
+                    ft.Text("Classes & Notes", size=14, color=TEXT_DARK, weight=ft.FontWeight.BOLD),
+                ], alignment=ft.MainAxisAlignment.START),
                 ft.Container(height=8),
                 ft.Row([
-                    class_dropdown,
-                    add_class_btn,
-                ], spacing=8, alignment=ft.MainAxisAlignment.START),
+                    add_folder_btn,
+                    add_note_btn,
+                ], spacing=6, alignment=ft.MainAxisAlignment.START),
+                ft.Container(height=8),
+                ft.Container(
+                    tree_container,
+                    height=300,  # Fixed height for scrollable tree
+                    bgcolor=WHITE,
+                    border_radius=8,
+                    border=ft.border.all(1, PASTEL_PURPLE),
+                    padding=ft.padding.all(8),
+                ),
             ], spacing=0, tight=True),
             padding=ft.padding.only(top=0, bottom=12),
         ),
@@ -1112,8 +1276,11 @@ def build_ui(page: ft.Page, callbacks=None):
         page.appbar = app_bar
         main_container.content = main_app_layout
 
+    # Initialize tree UI
+    build_tree_ui()
+    
     # Add overlays and components to page
-    page.overlay.extend([file_picker, add_class_dialog, document_picker])
+    page.overlay.extend([file_picker, add_folder_dialog, add_note_dialog, document_picker])
     page.add(main_container)
 
 
