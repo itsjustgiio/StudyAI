@@ -24,6 +24,13 @@ from .landing_page import create_landing_page
 
 
 # ============================================================================
+# UI CONSTANTS
+# ============================================================================
+
+# Content height for all main areas
+CONTENT_HEIGHT = 675  # Fixed height for all content areas
+
+# ============================================================================
 # STUB FUNCTIONS - UI PLACEHOLDERS ONLY
 # These are kept only for UI demo purposes and should NOT be used in production
 # ============================================================================
@@ -50,7 +57,9 @@ async def stub_start_transcription(callback):
 
 async def stub_stop_transcription():
     """UI PLACEHOLDER - Replace with app/transcription.py integration"""
-    return None
+    pass
+
+
 
 
 # ----------------------------
@@ -665,10 +674,10 @@ def build_ui(page: ft.Page, callbacks=None):
                 padding=ft.padding.only(bottom=15),
                 height=60,  # Fixed header height matching other tabs
             ),
-            # Main content area - fixed height for consistency
+                        # Main content area - fixed height
             ft.Container(
                 notes_editor_stack,
-                height=590,  # Fixed height to fit properly within border
+                height=CONTENT_HEIGHT,  # Fixed height for consistency
                 padding=ft.padding.all(8),  # Internal padding between border and textbox
                 border=ft.border.all(2, PASTEL_PURPLE),
                 border_radius=12,
@@ -911,10 +920,10 @@ def build_ui(page: ft.Page, callbacks=None):
                 padding=ft.padding.only(bottom=15),
                 height=60,  # Fixed header height matching other tabs
             ),
-            # Main content area - fixed height for consistency
+            # Main content area - fixed height
             ft.Container(
                 transcription_tabs,
-                height=590,  # Fixed height to match other tabs
+                height=CONTENT_HEIGHT,  # Fixed height for consistency
                 border=ft.border.all(2, PASTEL_PURPLE),
                 border_radius=12,
                 bgcolor=WHITE,
@@ -1176,10 +1185,10 @@ def build_ui(page: ft.Page, callbacks=None):
                 padding=ft.padding.only(bottom=15),
                 height=60,  # Fixed header height matching other tabs
             ),
-            # Main content area - fixed height for consistency
+            # Main content area - fixed height
             ft.Container(
                 tabs,
-                height=590,  # Fixed height to match other tabs
+                height=CONTENT_HEIGHT,  # Fixed height for consistency
                 border=ft.border.all(2, PASTEL_PURPLE),
                 border_radius=12,
                 bgcolor=WHITE,
@@ -1221,6 +1230,8 @@ def build_ui(page: ft.Page, callbacks=None):
 
     main_content.content = notes_view  # Content handled directly, no wrapper needed
 
+
+    
     # Content column with mode tabs and main content
     content_column = ft.Column([
         mode_tabs,  # Navigation buttons moved here
@@ -1278,6 +1289,8 @@ def build_ui(page: ft.Page, callbacks=None):
 
     # Initialize tree UI
     build_tree_ui()
+    
+
     
     # Add overlays and components to page
     page.overlay.extend([file_picker, add_folder_dialog, add_note_dialog, document_picker])
