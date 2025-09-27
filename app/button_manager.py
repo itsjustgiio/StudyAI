@@ -66,9 +66,9 @@ class ButtonManager:
             
             # Google Drive
             'connect_drive': self.google_drive_handler.connect_drive,
-            'upload_notes': self.google_drive_handler.upload_notes,
+            # 'upload_notes': self.google_drive_handler.upload_notes,
             'download_notes': self.google_drive_handler.download_notes,
-            'sync_files': self.google_drive_handler.sync_files,
+            # 'sync_files': self.google_drive_handler.sync_files,
         }
     
     def show_success(self, message: str):
