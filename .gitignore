@@ -42,3 +42,4 @@ data/transcripts/outputs/
 .env.local
 .env.*.local
 client_secret.json
+token.json
